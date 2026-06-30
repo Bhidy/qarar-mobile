@@ -15,8 +15,11 @@
 #                            native surface changed (new module, permission, SDK, plugin,
 #                            app.json native key…), the update is REFUSED — that change
 #                            needs a real App Store / Play release, not an OTA.
-#   3. CODE-SIGNED PUBLISH — eas update, signed with the local private key so a
-#                            compromised EAS account cannot push malicious JS.
+#   3. PUBLISH (UNSIGNED)  — eas update over HTTPS. Update code signing needs the
+#                            EAS Enterprise plan (not on this account), so updates
+#                            are NOT cryptographically signed; integrity rests on
+#                            HTTPS + EAS account access (protect it with 2FA). See
+#                            §2 to enable signing if the account is upgraded.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 cd "$(dirname "$0")/.."

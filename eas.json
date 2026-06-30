@@ -54,6 +54,7 @@
         "buildType": "app-bundle"
       },
       "env": {
+        "EXPO_APPLE_ID": "m.mostafa@mubasher.net",
         "EXPO_PUBLIC_SUPABASE_URL": "https://iwwjpzkfxoglugjqkznc.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3d2pwemtmeG9nbHVnanFrem5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NDEyOTUsImV4cCI6MjA5NTExNzI5NX0.pe8law4BXEz72GNSmX7MlUgnAl2DLQnPUBqatKPDzk0",
         "EXPO_PUBLIC_PROJECT_ID": "8d61ac43-8ae4-4fe3-a101-558817aabe3e"
@@ -66,11 +67,11 @@
         "appleTeamId": "7F4FTZQ5H7",
         "ascApiKeyId": "53QD83W9UK",
         "ascApiKeyIssuerId": "a3879256-fee1-4421-8369-9206ad76ee1c",
-        "ascApiKeyPath": "/Users/home/.expo/asc-keys/AuthKey_53QD83W9UK.p8",
+        "ascApiKeyPath": "/Users/mohamedbhidy/.expo/asc-keys/AuthKey_53QD83W9UK.p8",
         "ascAppId": "6772120783"
       },
       "android": {
-        "serviceAccountKeyPath": "/Users/home/.expo/google-play/service-account.json",
+        "serviceAccountKeyPath": "/Users/mohamedbhidy/.expo/google-play/service-account.json",
         "track": "internal",
         "releaseStatus": "completed"
       }

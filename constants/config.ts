@@ -1,6 +1,10 @@
 /**
  * App-wide product configuration flags.
  *
+ * ⚠️ OWNER-GATED — DO NOT set SUBSCRIPTIONS_ENABLED to `true` without EXPLICIT
+ *    written sign-off from the product owner (bheedey@gmail.com). The paid model
+ *    is intentionally OFF and not ready for release. See setup/PAYMENTS_MASTER_PLAN.md.
+ *
  * SUBSCRIPTIONS_ENABLED — master switch for the paid subscription / payment model.
  *
  *   false (current):  the app is a fully-FREE product. Every registered user is

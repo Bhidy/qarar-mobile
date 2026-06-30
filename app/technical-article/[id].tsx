@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, View, StyleSheet, Pressable } from "react-native";
+import { Image } from "expo-image";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -24,6 +25,34 @@ function htmlToParagraphs(html?: string | null): string[] {
     .replace(/&#39;|&rsquo;|&lsquo;/gi, "'")
     .replace(/&ldquo;|&rdquo;/gi, '"');
   return text.split(/\n+/).map((p) => p.trim()).filter(Boolean);
+}
+
+/**
+ * Analyst chart uploaded from the admin (item.chartImage). Shown in FULL via
+ * contentFit="contain" at the image's own aspect ratio, so a trading chart is
+ * never cropped (the old NewsCover path used contentFit="cover" at a fixed 200px
+ * height, which clipped the chart's top/bottom). The ratio is read from the
+ * loaded image and clamped so an extreme screenshot still renders a readable box;
+ * a neutral backdrop fills any letterbox margin. Falls back to 16:9 until known.
+ */
+function AnalystChart({ uri, bg }: { uri: string; bg: string }) {
+  const [ratio, setRatio] = useState(16 / 9);
+  return (
+    <View style={{ width: "100%", backgroundColor: bg }}>
+      <Image
+        source={{ uri }}
+        style={{ width: "100%", aspectRatio: ratio }}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        transition={220}
+        onLoad={(e) => {
+          const w = (e as any)?.source?.width;
+          const h = (e as any)?.source?.height;
+          if (w && h) setRatio(Math.min(2.2, Math.max(0.62, w / h)));
+        }}
+      />
+    </View>
+  );
 }
 
 export default function TechnicalArticleScreen() {
@@ -71,7 +100,13 @@ export default function TechnicalArticleScreen() {
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Spacing[8] }}>
-          <NewsCover image={item.chartImage} ticker={item.ticker} category={"Market"} height={200} />
+          {item.chartImage ? (
+            // Real analyst chart from admin — show it fully, uncropped.
+            <AnalystChart uri={item.chartImage} bg={C.bg.elevated} />
+          ) : (
+            // No chart uploaded — decorative editorial cover.
+            <NewsCover image={null} ticker={item.ticker} category={"Market"} height={200} />
+          )}
           <View style={styles.body}>
             {!!item.chartTimeframe && (
               <Text style={[styles.kicker, { color: C.accent.teal, fontFamily: ff("700") }, isRTL && styles.right]}>

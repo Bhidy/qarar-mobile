@@ -18,8 +18,10 @@
  *     expo-updates reverts to the last good / embedded bundle. Operator-initiated
  *     rollback is `eas update:rollback` / republish (see setup/OTA_UPDATE_RUNBOOK.md).
  *
- * Native config lives in app.json `updates` (url, runtimeVersion: appVersion, code
- * signing). Channel is injected per build profile by EAS Build (eas.json).
+ * Native config lives in app.json `updates` (url, runtimeVersion: fingerprint —
+ * the runtime auto-tracks the native surface so a JS bundle can never land on a
+ * binary with a different native layer). Channel is injected per build profile by
+ * EAS Build (eas.json).
  */
 import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";

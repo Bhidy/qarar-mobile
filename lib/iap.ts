@@ -13,6 +13,7 @@
  */
 import { Platform } from "react-native";
 import Purchases from "react-native-purchases";
+import { SUBSCRIPTIONS_ENABLED } from "@/constants/config";
 
 const IOS_KEY = (process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY || "").trim();
 const ANDROID_KEY = (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY || "").trim();
@@ -31,7 +32,15 @@ const RAW_KEY = Platform.OS === "ios" ? IOS_KEY : ANDROID_KEY;
 // test_ key is allowed so local StoreKit-sandbox testing keeps working.
 const IS_TEST_KEY = /^test_/i.test(RAW_KEY);
 export const IAP_BLOCKED_TEST_KEY = !__DEV__ && IS_TEST_KEY; // surfaced for QA/diagnostics
-const KEY = IAP_BLOCKED_TEST_KEY ? "" : RAW_KEY;
+
+// ── MASTER SWITCH ────────────────────────────────────────────────────────────
+// While the paid model is OFF (constants/config → SUBSCRIPTIONS_ENABLED=false),
+// the RevenueCat SDK is NEVER configured and no purchase can run — regardless of
+// whether a production key is present in the build env. Flipping SUBSCRIPTIONS_
+// ENABLED on (a deliberate CODE change) is the ONLY way to activate in-app
+// purchases. This makes "do not activate until the owner confirms" a code-level
+// guarantee, not an env-config convention that a stray key could trip.
+const KEY = !SUBSCRIPTIONS_ENABLED || IAP_BLOCKED_TEST_KEY ? "" : RAW_KEY;
 export const IAP_AVAILABLE = !!KEY;
 
 let configured = false;

@@ -4,12 +4,12 @@
     "slug": "rumble-pro",
     "version": "1.0.0",
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
     },
     "updates": {
       "url": "https://u.expo.dev/8d61ac43-8ae4-4fe3-a101-558817aabe3e",
       "enabled": true,
-      "checkAutomatically": "ON_LOAD",
+      "checkAutomatically": "ON_ERROR_RECOVERY",
       "fallbackToCacheTimeout": 0,
       "useEmbeddedUpdate": true
     },
