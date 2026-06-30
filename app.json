@@ -11,7 +11,10 @@
       "enabled": true,
       "checkAutomatically": "ON_ERROR_RECOVERY",
       "fallbackToCacheTimeout": 0,
-      "useEmbeddedUpdate": true
+      "useEmbeddedUpdate": true,
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
     },
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -28,7 +31,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rumble.pro",
-      "buildNumber": "83",
+      "buildNumber": "84",
       "appleTeamId": "7F4FTZQ5H7",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
@@ -41,7 +44,7 @@
         "backgroundColor": "#0A0E1F"
       },
       "package": "com.rumble.pro",
-      "versionCode": 7,
+      "versionCode": 9,
       "googleServicesFile": "./google-services.json"
     },
     "androidNavigationBar": {
@@ -69,6 +72,7 @@
       "expo-splash-screen",
       "./plugins/with-fast-android.js",
       "./plugins/with-ios-modular-headers.js",
+      "./plugins/with-android-gradle-memory.js",
       [
         "@react-native-google-signin/google-signin",
         {
