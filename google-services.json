@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "886833548155",
+    "project_id": "smart-signals-92737",
+    "storage_bucket": "smart-signals-92737.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:886833548155:android:093a64e7b119425617cbde",
+        "android_client_info": {
+          "package_name": "com.rumble.pro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1rW9BQkhJae-fslahbnrwxqp3_BU0KgM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

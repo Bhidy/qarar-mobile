@@ -1,0 +1,102 @@
+{
+  "expo": {
+    "name": "Smart Signals",
+    "slug": "rumble-pro",
+    "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8d61ac43-8ae4-4fe3-a101-558817aabe3e",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "useEmbeddedUpdate": true
+    },
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "scheme": "rumblepro",
+    "newArchEnabled": true,
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#0A0E1F",
+    "splash": {
+      "backgroundColor": "#0A0E1F"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rumble.pro",
+      "buildNumber": "82",
+      "appleTeamId": "7F4FTZQ5H7",
+      "infoPlist": {
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0E1F"
+      },
+      "package": "com.rumble.pro",
+      "versionCode": 7,
+      "googleServicesFile": "./google-services.json"
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#0A0E1F"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-system-ui",
+        {
+          "style": "dark"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4D8EF8",
+          "iosDisplayInForeground": true,
+          "sounds": []
+        }
+      ],
+      "expo-status-bar",
+      "expo-splash-screen",
+      "./plugins/with-fast-android.js",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.881007730616-6hm4qva60033c1mimhmpb72trhkk0kqo"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.4",
+            "buildReactNativeFromSource": true
+          }
+        }
+      ],
+      "expo-web-browser",
+      "expo-image",
+      "expo-updates"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "8d61ac43-8ae4-4fe3-a101-558817aabe3e"
+      }
+    }
+  }
+}

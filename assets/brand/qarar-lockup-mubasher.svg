@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 100">
+  
+  <g transform="translate(8, 18) scale(0.95)">
+    <circle cx="24" cy="24" r="18" stroke="#0A0E1F" stroke-width="2.6" fill="none"></circle>
+    <path d="M 37 37 L 58 58" stroke="#0A0E1F" stroke-width="2.6" stroke-linecap="round"></path>
+    <circle cx="58" cy="58" r="4" fill="#0B4DD4"></circle>
+  </g>
+  <text x="86" y="48" class="lat">Smart Signals</text>
+  <line x1="86" y1="60" x2="220" y2="60" stroke="#ECEEF3" stroke-width="1"></line>
+  <text x="86" y="78" class="sub">Powered by <tspan class="mub">Mubasher</tspan></text>
+</svg>
