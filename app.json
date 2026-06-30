@@ -68,6 +68,7 @@
       "expo-status-bar",
       "expo-splash-screen",
       "./plugins/with-fast-android.js",
+      "./plugins/with-ios-modular-headers.js",
       [
         "@react-native-google-signin/google-signin",
         {
