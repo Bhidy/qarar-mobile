@@ -44,7 +44,7 @@
         "backgroundColor": "#0A0E1F"
       },
       "package": "com.rumble.pro",
-      "versionCode": 9,
+      "versionCode": 11,
       "googleServicesFile": "./google-services.json"
     },
     "androidNavigationBar": {

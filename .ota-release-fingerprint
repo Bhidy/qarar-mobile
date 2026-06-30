@@ -1,8 +1,8 @@
 {
   "_comment": "Native fingerprint of the LIVE store build. The OTA publish guard (scripts/ota-publish.sh) refuses to ship an update whose native fingerprint differs from this. Re-stamp after EVERY store release. Do not hand-edit.",
-  "hash": "470fc2308664757269412710f3689839f73a4db2",
+  "hash": "76b712018cc8d402da1b7e74b1b371c513a12a2e",
   "appVersion": "1.0.0",
-  "iosBuildNumber": "83",
-  "androidVersionCode": "7",
-  "stampedAt": "2026-06-30T11:06:33Z"
+  "iosBuildNumber": "84",
+  "androidVersionCode": "11",
+  "stampedAt": "2026-06-30T12:43:50Z"
 }
