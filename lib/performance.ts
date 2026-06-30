@@ -34,6 +34,7 @@ export interface OverallPerformance {
   totalCount: number;
   activeCount: number;
   closedCount: number;
+  ratedCount: number;        // closed calls that resolved a realized return (hitRatio/avg denominator)
   winCount: number;
   lossCount: number;
   hitRatio: number | null;
@@ -42,6 +43,7 @@ export interface OverallPerformance {
   avgLoss: number | null;
   avgDurationDays: number | null;
   benchmarkReturn: number | null;
+  benchmarkedCount: number;  // calls with BOTH a realized return AND a benchmark (Alpha/Benchmark cohort)
   alpha: number | null;
   excludedCount: number;
 }
@@ -225,15 +227,24 @@ export function computeOverallPerformance(calls: PerfCall[], opts?: { publishabl
   const activeCount = calls.length - allClosed.length;
   const returns = closed.map(getRealizedReturn).filter((r): r is number => r !== null && Number.isFinite(r));
   const wins = returns.filter(r => r > 0);
-  const losses = returns.filter(r => r < 0);
+  const losses = returns.filter(r => r < 0);   // break-even (0%) is a miss, not a loss
   const durations = closed.map(getDurationDays).filter((d): d is number => d !== null);
-  const benchmarks = closed.map(getBenchmarkReturn).filter((b): b is number => b !== null && Number.isFinite(b));
-  const avgRealizedReturn = mean(returns);
-  const benchmarkReturn = mean(benchmarks);
+  // Alpha cohort: calls that have BOTH a realized return AND a benchmark, so Alpha is a
+  // true like-for-like average EXCESS return — not mean(returns over A) − mean(benchmark
+  // over B), which over/under-states the spread. Benchmark reported over the same cohort.
+  // (Web parity — keep IDENTICAL to web/lib/performance.ts; do not let them drift.)
+  const paired = closed
+    .map(c => ({ r: getRealizedReturn(c), b: getBenchmarkReturn(c) }))
+    .filter((x): x is { r: number; b: number } =>
+      x.r !== null && Number.isFinite(x.r) && x.b !== null && Number.isFinite(x.b));
+  const avgRealizedReturn = mean(returns);             // full track record (all rated closed)
+  const benchmarkReturn = mean(paired.map(p => p.b));  // over the comparable cohort only
+  const alpha = mean(paired.map(p => p.r - p.b));      // mean per-call excess (null if cohort empty)
   return {
     totalCount: calls.length,
     activeCount,
     closedCount: closed.length,
+    ratedCount: returns.length,
     winCount: wins.length,
     lossCount: losses.length,
     hitRatio: returns.length > 0 ? (wins.length / returns.length) * 100 : null,
@@ -242,7 +253,8 @@ export function computeOverallPerformance(calls: PerfCall[], opts?: { publishabl
     avgLoss: mean(losses),
     avgDurationDays: mean(durations),
     benchmarkReturn,
-    alpha: avgRealizedReturn !== null && benchmarkReturn !== null ? avgRealizedReturn - benchmarkReturn : null,
+    benchmarkedCount: paired.length,
+    alpha,
     excludedCount,
   };
 }

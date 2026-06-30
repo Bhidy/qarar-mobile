@@ -212,7 +212,7 @@ function toFundamental(row: any): FundamentalCall {
     currentPrice:  row.currentPrice ?? row.currentprice ?? 0,
     remaining:     row.remaining ?? 0,
     performance:   row.performance ?? 0,
-    egx30:         row.egx30 ?? 0,
+    egx30:         row.egx30 ?? undefined,   // missing benchmark EXCLUDED from the mean (NOT 0% — that fakes a flat market + inflates alpha)
     egx30Capped:   row.egx30Capped ?? row.egx30capped ?? undefined,
     sector:        row.sector ?? "",
     thesis:        row.thesis ?? undefined,
@@ -315,7 +315,7 @@ function toSaudiStock(row: any): SaudiStock {
     currentPrice:  row.currentPrice ?? row.currentprice ?? 0,
     remaining:     row.remaining ?? 0,
     performance:   row.performance ?? 0,
-    tadawul:       row.tadawul ?? 0,
+    tadawul:       row.tadawul ?? undefined,   // missing benchmark EXCLUDED from the mean (NOT 0%)
     thesis:        row.thesis ?? "",
     thesisAr:      row.thesisAr ?? row.thesisar ?? "",
     // Lifecycle fields — required by the performance engine (closed-call cohort).
@@ -371,7 +371,7 @@ function toUsaStock(row: any): UsaStock {
     currentPrice:  row.currentPrice ?? row.currentprice ?? 0,
     remaining:     row.remaining ?? 0,
     performance:   row.performance ?? 0,
-    sp500:         row.sp500 ?? 0,
+    sp500:         row.sp500 ?? undefined,   // missing benchmark EXCLUDED from the mean (NOT 0%)
     thesis:        row.thesis ?? "",
     thesisAr:      row.thesisAr ?? row.thesisar ?? "",
     // Lifecycle fields — required by the performance engine (closed-call cohort).
