@@ -52,13 +52,19 @@ export function HomePodcastBlock() {
 
   useEffect(() => {
     let cancelled = false;
-    // `cur ?? eps[0].id` never overwrites an existing selection → safe on every payload.
+    // Featured = the LATEST episode. Home has NO manual episode picker (unlike the
+    // Podcast tab), so we must always advance to the newest id. The old
+    // `cur ?? eps[0].id` pinned the card to whatever was FIRST cached and never
+    // updated when a newer episode dropped — that was the "Home shows the old
+    // episode" bug: it painted the stale cache (e.g. 29-Jun) then ignored the fresh
+    // 30-Jun from revalidation. Only swap when the id actually changes, so the
+    // Spotify embed (keyed on activeId) isn't needlessly reloaded.
     const apply = (j: any) => {
       if (!j) return;
       const eps = ((j.episodes ?? []) as Episode[]).slice(0, 1);
       if (cancelled) return;
       setHasEpisodes(eps.length > 0);
-      if (eps.length > 0) setActiveId((cur) => cur ?? eps[0].id);
+      if (eps.length > 0) setActiveId((cur) => (cur === eps[0].id ? cur : eps[0].id));
     };
     (async () => {
       // 1) instant paint from the shared cache
