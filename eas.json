@@ -75,6 +75,13 @@
         "track": "production",
         "releaseStatus": "completed"
       }
+    },
+    "internal": {
+      "android": {
+        "serviceAccountKeyPath": "/Users/mohamedbhidy/.expo/google-play/service-account.json",
+        "track": "internal",
+        "releaseStatus": "completed"
+      }
     }
   }
 }
