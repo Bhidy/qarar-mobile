@@ -10,6 +10,12 @@ export type CallStatus = "active" | "closed";
 export interface PerfCall {
   status?: CallStatus | string;
   analyst?: string | string[];
+  // identity (optional — used by per-call comparison rows / charts / tables)
+  id?: string | number;
+  ticker?: string;
+  company?: string;
+  companyAr?: string;
+  signal?: string;
   entryPrice?: number;        // fundamental
   entryMin?: number;          // technical zone
   entryMax?: number;
@@ -127,6 +133,9 @@ export function indexReturnPct(
   if (!bars || bars.length < 2) return null;
   const from = parseCallDate(fromDate ?? undefined)?.getTime();
   if (from == null || Number.isNaN(from)) return null;
+  // Start date beyond index coverage ⇒ no valid baseline; return null so the caller
+  // keeps the stored benchmark instead of clamping both ends to the last bar (false 0%).
+  if (from > bars[bars.length - 1].t) return null;
   const start = closeAsOf(bars, from);
   const toT = toDate ? parseCallDate(toDate)?.getTime() : undefined;
   const end = (toT != null && !Number.isNaN(toT)) ? closeAsOf(bars, toT) : bars[bars.length - 1].c;
@@ -218,6 +227,105 @@ export function getBenchmarkReturn(call: PerfCall): number | null {
 function mean(values: number[]): number | null {
   if (values.length === 0) return null;
   return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+// ── Per-call comparison (Stock Return vs matched-period Benchmark) ────────────
+// Web parity — keep IDENTICAL to web/lib/performance.ts. Every signal is compared
+// against the index over ITS OWN holding period; headline numbers are equal-weighted
+// AVERAGES across calls (never a single "oldest→now" spread).
+export type CallDirection = "buy" | "sell";
+const SELL_SIGNALS = new Set(["Sell", "Sell Rallies", "Sell Market"]);
+export function callDirection(signal?: string | null): CallDirection {
+  return signal && SELL_SIGNALS.has(signal) ? "sell" : "buy";
+}
+
+/** Stock return (%) for ANY call: realized once closed, live/unrealized while open. */
+export function getStockReturn(call: PerfCall): number | null {
+  if (isClosed(call)) return getRealizedReturn(call);
+  const live = getLiveReturn(call);
+  if (live !== null) return live;
+  if (typeof call.performance === "number" && Number.isFinite(call.performance)) return call.performance;
+  return null;
+}
+
+export interface CallComparisonRow {
+  id?: string | number;
+  ticker: string;
+  company?: string;
+  companyAr?: string;
+  signal?: string;
+  direction: CallDirection;
+  status: CallStatus;
+  realized: boolean;
+  initiatedDate?: string;
+  closedDate?: string;
+  stockReturn: number;
+  benchmarkReturn: number;
+  alpha: number;
+}
+
+export interface CallComparison {
+  rows: CallComparisonRow[];
+  count: number;
+  openCount: number;
+  closedCount: number;
+  excludedCount: number;
+  avgStockReturn: number | null;
+  avgBenchmarkReturn: number | null;
+  avgAlpha: number | null;
+}
+
+export function computeCallComparison(
+  calls: PerfCall[],
+  opts?: { publishableOnly?: boolean; sort?: "initiatedAsc" | "initiatedDesc" | "alphaDesc" },
+): CallComparison {
+  const eligible = calls.filter(c =>
+    isClosed(c) ? (opts?.publishableOnly ? isPublishable(c) : true) : true);
+
+  const rows: CallComparisonRow[] = [];
+  for (const c of eligible) {
+    const stockReturn = getStockReturn(c);
+    const benchmarkReturn = getBenchmarkReturn(c);
+    if (stockReturn === null || !Number.isFinite(stockReturn) ||
+        benchmarkReturn === null || !Number.isFinite(benchmarkReturn)) {
+      continue;
+    }
+    const closed = isClosed(c);
+    rows.push({
+      id: c.id,
+      ticker: String(c.ticker ?? "").toUpperCase(),
+      company: c.company,
+      companyAr: c.companyAr,
+      signal: c.signal,
+      direction: callDirection(c.signal),
+      status: closed ? "closed" : "active",
+      realized: closed,
+      initiatedDate: c.initiatedDate ?? c.date,
+      closedDate: c.closedDate,
+      stockReturn: +stockReturn.toFixed(2),
+      benchmarkReturn: +benchmarkReturn.toFixed(2),
+      alpha: +(stockReturn - benchmarkReturn).toFixed(2),
+    });
+  }
+
+  const sort = opts?.sort ?? "initiatedAsc";
+  rows.sort((a, b) => {
+    if (sort === "alphaDesc") return b.alpha - a.alpha;
+    const ta = parseCallDate(a.initiatedDate)?.getTime() ?? 0;
+    const tb = parseCallDate(b.initiatedDate)?.getTime() ?? 0;
+    return sort === "initiatedDesc" ? tb - ta : ta - tb;
+  });
+
+  return {
+    rows,
+    count: rows.length,
+    openCount: rows.filter(r => !r.realized).length,
+    closedCount: rows.filter(r => r.realized).length,
+    excludedCount: calls.length - rows.length,
+    avgStockReturn: mean(rows.map(r => r.stockReturn)),
+    avgBenchmarkReturn: mean(rows.map(r => r.benchmarkReturn)),
+    avgAlpha: mean(rows.map(r => r.alpha)),
+  };
 }
 
 export function computeOverallPerformance(calls: PerfCall[], opts?: { publishableOnly?: boolean }): OverallPerformance {

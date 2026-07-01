@@ -17,11 +17,12 @@ import { CallUpdates, UpdatedBadge } from "@/components/shared/CallUpdates";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ViewMoreButton } from "@/components/shared/ViewMoreButton";
 import { ScreenHeader } from "@/components/shared/ScreenHeader";
+import { PerformanceComparison } from "@/components/fundamental/PerformanceComparison";
 import { useViewMore } from "@/hooks/useViewMore";
 import { visibleCallUpdates, effectiveStatus } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
 import { fontFamilyFor } from "@/lib/typography";
-import { computeOverallPerformance, fmtPct, isClosed, getRealizedReturn } from "@/lib/performance";
+import { getRealizedReturn } from "@/lib/performance";
 import { RichText, looksLikeHtml } from "@/lib/rich-text";
 
 export default function FundamentalScreen() {
@@ -43,10 +44,6 @@ export default function FundamentalScreen() {
 
   // Market-aware data
   const fundamentalData = isUsa ? USA_FUNDAMENTAL : isSaudi ? SAUDI_FUNDAMENTAL : FUNDAMENTAL_CALLS;
-
-  // Live track record — feed-verified closed calls only (publication gate), so an
-  // unverifiable price can never reach the customer-facing numbers.
-  const perf = computeOverallPerformance(fundamentalData as any[], { publishableOnly: true });
 
   const signalFiltered = fundamentalData.filter(c =>
     activeFilter === "all" ? true : c.signal.toLowerCase() === activeFilter
@@ -79,33 +76,9 @@ export default function FundamentalScreen() {
           icon="bar-chart"
         />
 
-        {/* Performance banner */}
-        <View style={[styles.sectionPad, { marginTop: Spacing[4] }]}>
-          <View style={[styles.perfBanner, { backgroundColor: C.primaryDeep, borderColor: `${C.primary}30` }]}>
-            <View style={[styles.arcDecor, { borderColor: "rgba(255,255,255,0.07)" }]} />
-            <View style={[styles.perfTitle, isRTL && styles.rowRTL]}>
-              <Ionicons name="trophy-outline" size={14} color="rgba(255,255,255,0.6)" />
-              <Text style={[styles.perfTitleText, { fontFamily: fontFamily("700") }]}>
-                {isAr ? "الأداء العام" : "Overall Performance"}
-              </Text>
-              <Text style={[styles.perfSubtitleText, { fontFamily: fontFamily("400") }]} numberOfLines={1}>
-                {isAr ? "— متوسط أداء التوصيات المغلقة" : "— Average performance of closed calls"}
-              </Text>
-            </View>
-            <View style={styles.statsGrid}>
-              {[
-                { label: isAr ? "متوسط العائد المحقق" : "Avg Realized Return", value: fmtPct(perf.avgRealizedReturn, 1, true), hi: true },
-                { label: isAr ? `مؤشر ${benchmarkLabel}` : `${benchmarkLabel} Benchmark`, value: fmtPct(perf.benchmarkReturn, 1, true) },
-                { label: isAr ? "ألفا" : "Alpha", value: fmtPct(perf.alpha, 1, true), hi: true },
-                { label: isAr ? "متوسط المدة" : "Avg Duration", value: perf.avgDurationDays === null ? "—" : `${Math.round(perf.avgDurationDays)} ${isAr ? "يوم" : "Days"}`, hi: false },
-              ].map(s => (
-                <View key={s.label} style={[styles.statItem, s.hi && styles.statHighlight]}>
-                  <Text style={[styles.statLabel, { fontFamily: fontFamily("600") }, isRTL && styles.textRight]}>{s.label}</Text>
-                  <Text style={[styles.statValue, isRTL && styles.textRight]}>{s.value}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+        {/* Per-call performance vs benchmark — averages always visible, breakdown collapsed */}
+        <View style={{ marginTop: Spacing[4] }}>
+          <PerformanceComparison data={fundamentalData as any[]} benchmarkLabel={benchmarkLabel} />
         </View>
 
         {/* Calls — ONE "التوصيات" section, Active/Closed tabs + signal filter, 3 rows + Load more */}
@@ -542,16 +515,6 @@ const styles = StyleSheet.create({
   pageIcon: { width: 40, height: 40, borderRadius: Radius.xl, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   pageTitle: { fontSize: Typography.xl, fontWeight: "800" },
   pageSubtitle: { fontSize: Typography.xs, marginTop: 1 },
-  perfBanner: { borderRadius: Radius["2xl"], overflow: "hidden", padding: Spacing[4], borderWidth: 1 },
-  arcDecor: { position: "absolute", right: -40, top: -40, width: 160, height: 160, borderRadius: 80, borderWidth: 1 },
-  perfTitle: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: Spacing[4], flexWrap: "wrap" },
-  perfTitleText: { color: "rgba(255,255,255,0.7)", fontSize: Typography.sm, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6 },
-  perfSubtitleText: { color: "rgba(255,255,255,0.45)", fontSize: 11, fontWeight: "400", flexShrink: 1 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing[2] },
-  statItem: { flex: 1, minWidth: "45%", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", borderRadius: Radius.lg, padding: Spacing[3], gap: 3 },
-  statHighlight: { backgroundColor: "rgba(77,142,248,0.2)", borderColor: "rgba(77,142,248,0.4)" },
-  statLabel: { color: "rgba(255,255,255,0.5)", fontSize: 9, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
-  statValue: { color: "rgba(255,255,255,0.9)", fontSize: Typography.lg, fontWeight: "800", letterSpacing: -0.5 },
   filterRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionTitle: { fontSize: Typography.md, fontWeight: "800" },
   sectionSub: { fontSize: Typography.xs, marginTop: 2 },
