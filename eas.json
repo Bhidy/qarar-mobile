@@ -30,7 +30,7 @@
     },
     "preview-aab": {
       "distribution": "internal",
-      "channel": "staging",
+      "channel": "production",
       "android": {
         "buildType": "app-bundle"
       },
@@ -72,7 +72,7 @@
       },
       "android": {
         "serviceAccountKeyPath": "/Users/mohamedbhidy/.expo/google-play/service-account.json",
-        "track": "internal",
+        "track": "production",
         "releaseStatus": "completed"
       }
     }

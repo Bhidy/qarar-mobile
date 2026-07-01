@@ -116,13 +116,11 @@ const translations = {
     changePhoto:     { en: "Change Photo",           ar: "تغيير الصورة" },
     chooseFromLib:   { en: "Choose from Library",    ar: "اختر من المكتبة" },
     takePhoto:       { en: "Take Photo",             ar: "التقاط صورة" },
-    premium:         { en: "Premium",                ar: "مميز" },
     editProfile:        { en: "Edit Profile",        ar: "تعديل الملف الشخصي" },
     changePassword:     { en: "Change Password",     ar: "تغيير كلمة المرور" },
     changePasswordPrompt:{ en: "Enter your new password (8+ characters):", ar: "أدخل كلمة المرور الجديدة (٨ أحرف على الأقل):" },
     changeEmail:        { en: "Change Email",        ar: "تغيير البريد الإلكتروني" },
     changeEmailPrompt:  { en: "Enter your new email address:", ar: "أدخل عنوان بريدك الإلكتروني الجديد:" },
-    manageSubscription: { en: "Manage Subscription", ar: "إدارة الاشتراك" },
     editProfileTitle:   { en: "Edit Profile",        ar: "تعديل الملف الشخصي" },
     articlesRead:    { en: "Articles Read",          ar: "مقالات مقروءة" },
     activeCalls:     { en: "Active Calls",           ar: "توصيات فعّالة" },
@@ -179,7 +177,7 @@ export function getTranslation(
   return node?.[locale] ?? node?.en ?? humanizeKey(parts[parts.length - 1]);
 }
 
-/** "changePassword" → "Change Password", "manageSubscription" → "Manage Subscription". */
+/** "changePassword" → "Change Password", "editProfile" → "Edit Profile". */
 function humanizeKey(seg: string): string {
   const spaced = seg
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")

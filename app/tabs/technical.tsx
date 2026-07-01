@@ -26,11 +26,12 @@ import { TickerLogo } from "@/components/shared/TickerLogo";
 import { type SaudiTechnical } from "@/constants/saudi-data";
 import { type UsaTechnical } from "@/constants/usa-data";
 import { looksLikeHtml } from "@/lib/rich-text";
+import { indexCatalogEntry } from "@/constants/index-catalog";
 
 export default function TechnicalScreen() {
   const C = useColors();
   const { market, language, isRTL } = useTheme();
-  const { TECHNICAL_CALLS, ARTICLES, TECHNICAL_ARTICLES, SAUDI_TECHNICAL, USA_TECHNICAL, loading, refetch } = useData();
+  const { TECHNICAL_CALLS, ARTICLES, TECHNICAL_ARTICLES, INDEX_UPDATES, SAUDI_TECHNICAL, USA_TECHNICAL, loading, refetch } = useData();
 
   const watchlists = ARTICLES.filter(a => a.section === "technical");
 
@@ -45,6 +46,12 @@ export default function TechnicalScreen() {
     : isSaudi ? (a.market === "saudi" || a.market === "both")
     : (!a.market || a.market === "egypt" || a.market === "both"),
   );
+  // Index Updates — analyst commentary on a market index for the active market
+  // ("both" isn't a concept here since every index has exactly one home market).
+  const indexUpdates = (INDEX_UPDATES as any[]).filter(u =>
+    isUsa ? u.market === "usa" : isSaudi ? u.market === "saudi" : (!u.market || u.market === "egypt"),
+  );
+
   const tfLabel = (tf?: string) => {
     if (!tf) return "";
     const ar: Record<string, string> = { Daily: "يومي", Weekly: "أسبوعي", Monthly: "شهري", Intraday: "خلال اليوم" };
@@ -164,6 +171,68 @@ export default function TechnicalScreen() {
             />
           )}
         </View>
+
+        {/* Index Updates — analyst commentary on a market index, not a stock */}
+        {indexUpdates.length > 0 && (
+          <View style={{ marginTop: Spacing[6] }}>
+            <View style={styles.sectionPad}>
+              <Text style={[styles.sectionTitle, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>
+                {isAr ? "تحديثات المؤشرات" : "Index Updates"}
+              </Text>
+              <Text style={[styles.sectionSub, { color: C.text.muted, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}>
+                {isAr ? "تعليقات المحللين على المؤشرات الرئيسية للسوق" : "Analyst commentary on the major market indices"}
+              </Text>
+            </View>
+            <FlatList
+              horizontal
+              inverted={isAr}
+              data={indexUpdates}
+              keyExtractor={i => i.id}
+              renderItem={({ item }) => {
+                const title = isAr && item.titleAr ? item.titleAr : item.title;
+                const entry = indexCatalogEntry(item.indexSymbol);
+                const overviewColor = item.overview === "Bullish" ? "#1F8F3B" : item.overview === "Bearish" ? "#E5484D" : "#7C7C7C";
+                const overviewBg = item.overview === "Bullish" ? "rgba(132,223,92,0.16)" : item.overview === "Bearish" ? "rgba(229,72,77,0.12)" : "rgba(124,124,124,0.10)";
+                const overviewLabel = item.overview === "Bullish" ? (isAr ? "صعودي" : "Bullish") : item.overview === "Bearish" ? (isAr ? "هبوطي" : "Bearish") : (isAr ? "محايد" : "Neutral");
+                return (
+                  <Pressable
+                    style={[styles.watchCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}
+                    onPress={() => router.push({ pathname: "/index-update/[id]", params: { id: item.id } })}
+                  >
+                    <View style={[styles.watchThumb, { backgroundColor: C.bg.elevated }]}>
+                      {item.chartImage ? (
+                        <Image source={{ uri: item.chartImage }} style={StyleSheet.absoluteFill as any} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.playCircle, { backgroundColor: `${C.accent.teal}20`, borderColor: `${C.accent.teal}40` }]}>
+                          <Ionicons name="bar-chart" size={18} color={C.accent.teal} />
+                        </View>
+                      )}
+                      <View style={[styles.timeBadge, { backgroundColor: "rgba(0,0,0,0.6)" }, isRTL && { left: undefined, right: 8 }]}>
+                        <Text style={styles.timeBadgeText}>{entry?.flag} {item.indexSymbol}</Text>
+                      </View>
+                      {!!item.overview && (
+                        <View style={[styles.timeBadge, { backgroundColor: overviewBg, left: undefined, right: 8 }, isRTL && { right: undefined, left: 8 }]}>
+                          <Text style={[styles.timeBadgeText, { color: overviewColor }]}>{overviewLabel}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.watchBody}>
+                      <Text style={[styles.watchTitle, { color: C.text.primary, fontFamily: fontFamily("700") }, isRTL && styles.textRight]} numberOfLines={2}>
+                        {title}
+                      </Text>
+                      <View style={[styles.watchMeta, isRTL && styles.rowRTL]}>
+                        <Text style={[styles.watchAuthor, { color: C.accent.teal, fontFamily: fontFamily("700") }]}>{item.analyst || ""}</Text>
+                        <Text style={[styles.watchDate, { color: C.text.muted }]}>{item.date}</Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              }}
+              contentContainerStyle={styles.hList}
+              showsHorizontalScrollIndicator={false}
+            />
+          </View>
+        )}
 
         {/* Weekly Watchlists / Technical Reports — only Egypt */}
         {!isSaudi && !isUsa && (

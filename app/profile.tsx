@@ -1,4 +1,4 @@
-import { ScrollView, View, StyleSheet, Pressable, Switch, Animated, Linking, Alert, Image, TouchableOpacity, Platform } from "react-native";
+import { ScrollView, View, StyleSheet, Pressable, Switch, Animated, Linking, Alert, Image, TouchableOpacity } from "react-native";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -101,7 +101,7 @@ function Section({ icon, title, children, C, rtl }: {
 export default function ProfileScreen() {
   const C = useColors();
   const { mode, accent, language, market, photoUri, setMode, setAccent, setLanguage, setMarket, setPhotoUri, t } = useTheme();
-  const { user, premium, subscriptionsEnabled, signOut, updatePassword, updateEmail, deleteAccount } = useAuth();
+  const { user, signOut, updatePassword, updateEmail, deleteAccount } = useAuth();
   const rtl = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(rtl, w);
   const df = (w: "400" | "600" | "700" | "800") => displayFontFor(rtl, w);
@@ -261,14 +261,6 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleManageSubscription = () => {
-    Haptics.selectionAsync();
-    Linking.openURL(Platform.OS === 'ios'
-      ? 'https://apps.apple.com/account/subscriptions'
-      : 'https://play.google.com/store/account/subscriptions'
-    );
-  };
-
   const handleDeleteAccount = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     Alert.alert(
@@ -364,14 +356,6 @@ export default function ProfileScreen() {
             <Text style={[styles.heroEmail, { color: C.text.muted, fontFamily: ff("400"), textAlign: rtl ? "right" : "center" }]}>
               {user?.email || "—"}
             </Text>
-            {subscriptionsEnabled && premium && (
-              <View style={[styles.premiumBadge, { backgroundColor: `${C.primary}18`, borderColor: `${C.primary}30` }]}>
-                <Ionicons name="diamond" size={9} color={C.primary} style={{ marginEnd: 5 }} />
-                <Text style={[styles.premiumText, { color: C.primary, fontFamily: ff("800") }]}>
-                  {t("profile.premium").toUpperCase()}
-                </Text>
-              </View>
-            )}
           </Animated.View>
         </Animated.View>
 
@@ -488,11 +472,6 @@ export default function ProfileScreen() {
         <Section icon="person-circle-outline" title={t("profile.account")} C={C} rtl={rtl}>
           {user !== null && (
             <>
-              {/* Subscription management is hidden while the paid model is off (no paid
-                  tiers exist yet). Re-enabling SUBSCRIPTIONS_ENABLED restores this row. */}
-              {subscriptionsEnabled && (
-                <PressRow icon="card-outline" label={t('profile.manageSubscription')} C={C} rtl={rtl} onPress={handleManageSubscription} />
-              )}
               <PressRow icon="person-outline" label={t('profile.editProfile')}   C={C} rtl={rtl} onPress={() => router.push('/edit-profile')} />
               <PressRow icon="key-outline"    label={t('profile.changePassword')} C={C} rtl={rtl} onPress={handleChangePassword} />
               <PressRow icon="mail-outline"   label={t('profile.changeEmail')}    C={C} rtl={rtl} value={user?.email?.split('@')[0] || ''} onPress={handleChangeEmail} />
@@ -534,8 +513,6 @@ const styles = StyleSheet.create({
   heroText:        { alignItems: "center", gap: 3 },
   heroName:        { fontSize: 20, fontWeight: "800", letterSpacing: -0.4 },
   heroEmail:       { fontSize: 13, marginTop: 2 },
-  premiumBadge:    { flexDirection: "row", alignItems: "center", marginTop: 10, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  premiumText:     { fontSize: 10, letterSpacing: 1.5 },
   sectionWrap:     { gap: 6 },
   sectionHeader:   { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 4 },
   sectionTitle:    { fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },

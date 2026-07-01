@@ -31,7 +31,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rumble.pro",
-      "buildNumber": "85",
+      "buildNumber": "86",
       "appleTeamId": "7F4FTZQ5H7",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
@@ -44,8 +44,12 @@
         "backgroundColor": "#0A0E1F"
       },
       "package": "com.rumble.pro",
-      "versionCode": 12,
-      "googleServicesFile": "./google-services.json"
+      "versionCode": 14,
+      "googleServicesFile": "./google-services.json",
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "androidNavigationBar": {
       "backgroundColor": "#0A0E1F"

@@ -181,7 +181,6 @@ function AppLayout() {
         <Stack.Screen name="profile" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
         <Stack.Screen name="login" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />
         <Stack.Screen name="biometric" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />
-        <Stack.Screen name="subscribe" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
         <Stack.Screen name="onboarding" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />
         <Stack.Screen name="edit-profile" options={{ animation: "slide_from_right", headerShown: false }} />
       </Stack>
