@@ -29,13 +29,16 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.rumble.pro",
-      "buildNumber": "87",
+      "buildNumber": "92",
       "appleTeamId": "7F4FTZQ5H7",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Smart Signals uses the camera only when you choose to take a new profile photo.",
+        "NSPhotoLibraryUsageDescription": "Smart Signals accesses your photo library only when you choose a profile picture.",
+        "NSFaceIDUsageDescription": "Smart Signals uses Face ID to securely unlock your account on this device."
       }
     },
     "android": {
@@ -57,6 +60,15 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Smart Signals accesses your photo library only when you choose a profile picture.",
+          "cameraPermission": "Smart Signals uses the camera only when you choose to take a new profile photo.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-system-ui",
         {

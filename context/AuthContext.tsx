@@ -5,9 +5,12 @@
  * payment, entitlement, or in-app-purchase layer — access is simply "signed in or not".
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import { Platform } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
+import * as AppleAuthentication from "expo-apple-authentication";
+import * as Crypto from "expo-crypto";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/context/ThemeContext";
 import { WEB_BASE } from "@/constants/site";
@@ -33,6 +36,10 @@ interface AuthValue {
   accessToken: string | null;
   signInWithPassword: (email: string, password: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
+  /** Native Sign in with Apple (iOS). Required by App Store Guideline 4.8 alongside Google. */
+  signInWithApple: () => Promise<{ error?: string }>;
+  /** Whether Sign in with Apple is available on this device (iOS 13+). */
+  appleAuthAvailable: boolean;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error?: string }>;
   sendOtp: (email: string) => Promise<{ error?: string }>;
   verifyOtp: (email: string, token: string) => Promise<{ error?: string }>;
@@ -48,6 +55,7 @@ interface AuthValue {
 const AuthContext = createContext<AuthValue>({
   user: null, session: null, loading: true, accessToken: null,
   signInWithPassword: async () => ({}), signInWithGoogle: async () => ({}),
+  signInWithApple: async () => ({}), appleAuthAvailable: false,
   signUp: async () => ({}), sendOtp: async () => ({}),
   verifyOtp: async () => ({}), signOut: async () => {},
   resetPassword: async () => ({}), updatePassword: async () => ({}),
@@ -60,7 +68,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [appleAuthAvailable, setAppleAuthAvailable] = useState(false);
   const tokenRef = useRef<string | null>(null);
+
+  // Sign in with Apple is iOS 13+ only. Probe once so the UI can show the button
+  // exactly where Apple requires it (and never on Android, where it's unavailable).
+  useEffect(() => {
+    let alive = true;
+    if (Platform.OS === "ios") {
+      AppleAuthentication.isAvailableAsync()
+        .then((ok) => { if (alive) setAppleAuthAvailable(ok); })
+        .catch(() => { if (alive) setAppleAuthAvailable(false); });
+    }
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
@@ -147,6 +168,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Native Sign in with Apple → Supabase. REQUIRED by App Store Guideline 4.8 because
+  // the app also offers Google sign-in. Apple returns the identityToken directly, which we
+  // hand straight to Supabase (no client nonce — see the minimal flow below).
+  const signInWithApple = useCallback(async () => {
+    if (!supabase) return { error: "Auth not configured" };
+    if (Platform.OS !== "ios") return { error: "Apple Sign-In is only available on iOS" };
+    try {
+      // Native Apple sign-in → Supabase, following Supabase's official React Native example
+      // exactly (no client nonce): the identityToken is obtained fresh and exchanged
+      // immediately over TLS, and gotrue verifies the token signature + audience server-side.
+      // Keeping the flow minimal removes the most common token-exchange failure mode.
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential.identityToken) return { error: "No identity token from Apple" };
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "apple",
+        token: credential.identityToken,
+      });
+      if (error) {
+        // Token exchange rejected by Supabase (aud/nonce/provider). Log the raw reason so
+        // a misconfiguration is diagnosable, and surface a clear message to the user.
+        console.warn("[AppleSignIn] Supabase idToken exchange failed:", error.status, error.message);
+        return { error: `Apple Sign-In couldn't be verified (${error.message}). Please try again.` };
+      }
+
+      // Apple only sends the full name on the VERY FIRST authorization. Persist it so the
+      // profile isn't blank (Supabase can't recover it on later sign-ins).
+      const given = credential.fullName?.givenName ?? "";
+      const family = credential.fullName?.familyName ?? "";
+      const fullName = `${given} ${family}`.trim();
+      if (fullName) {
+        try { await supabase.auth.updateUser({ data: { full_name: fullName } }); } catch { /* non-fatal */ }
+      }
+      return {};
+    } catch (e: any) {
+      const code = String(e?.code ?? e?.nativeErrorCode ?? "");
+      // User tapped "Cancel" in the Apple sheet — surface nothing, not an error.
+      if (code === "ERR_REQUEST_CANCELED" || code === "ERR_CANCELED" || code === "1001") {
+        return { error: "" };
+      }
+      // Apple itself couldn't complete the authorization (it shows its own "Sign Up Not
+      // Completed" alert). On a correctly-configured app this is always an Apple-Account /
+      // device issue — surface the EXACT code + the real-world causes so it's diagnosable.
+      const msg = e?.message ? String(e.message) : "no message";
+      console.warn("[AppleSignIn] native failure:", code, msg, JSON.stringify(e ?? {}));
+      return {
+        error:
+          `Sign in with Apple couldn't be completed (code ${code || "unknown"}: ${msg}).\n\n` +
+          `This is an Apple-side error. On this device please confirm:\n` +
+          `•  Signed in to iCloud (Settings › your name)\n` +
+          `•  Two-Factor Authentication is ON for that Apple Account\n` +
+          `•  It's a personal Apple Account — company / "Managed" Apple IDs cannot use Sign in with Apple\n` +
+          `•  Date & Time = Automatic, and no VPN is active\n\n` +
+          `You can also continue with email or Google.`,
+      };
+    }
+  }, []);
+
   const signOut = useCallback(async () => {
     if (!supabase) return;
     // OAuth web flow keeps no native Google session to clear — Supabase signOut is enough.
@@ -206,7 +290,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, session, loading, accessToken: session?.access_token ?? null,
-      signInWithPassword, signInWithGoogle, signUp, sendOtp, verifyOtp, signOut,
+      signInWithPassword, signInWithGoogle, signInWithApple, appleAuthAvailable,
+      signUp, sendOtp, verifyOtp, signOut,
       resetPassword, updatePassword, updateEmail, updateFullName, updatePhone, deleteAccount,
     }}>
       {children}

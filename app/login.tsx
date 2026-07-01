@@ -34,6 +34,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as LocalAuthentication from "expo-local-authentication";
+import * as AppleAuthentication from "expo-apple-authentication";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/context/ThemeContext";
 import { Spacing, Typography, Radius } from "@/constants/theme";
@@ -210,7 +211,7 @@ export default function LoginScreen() {
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
   const df = (w: "400" | "600" | "700" | "800") => displayFontFor(isAr, w);
-  const { signInWithPassword, signInWithGoogle, signUp, sendOtp, verifyOtp, resetPassword, user } = useAuth();
+  const { signInWithPassword, signInWithGoogle, signInWithApple, appleAuthAvailable, signUp, sendOtp, verifyOtp, resetPassword, user } = useAuth();
 
   const T = (en: string, ar: string) => (isAr ? ar : en);
 
@@ -225,6 +226,7 @@ export default function LoginScreen() {
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [appleBusy, setAppleBusy] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -355,8 +357,9 @@ export default function LoginScreen() {
     setErrors({});
     try {
       const r = await signInWithGoogle();
-      if (r.error) {
-        // empty string = user cancelled — show nothing
+      if (r.error !== undefined) {
+        // non-empty = real error to surface; "" = user cancelled (show nothing).
+        // Either way we must NOT navigate — there is no session.
         if (r.error) setErrors({ general: r.error });
         return;
       }
@@ -364,6 +367,29 @@ export default function LoginScreen() {
       router.replace("/tabs");
     } finally {
       setGoogleBusy(false);
+    }
+  }
+
+  async function handleAppleSignIn() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setAppleBusy(true);
+    setErrors({});
+    try {
+      const r = await signInWithApple();
+      if (r.error !== undefined) {
+        // non-empty = real error to surface; "" = user cancelled (show nothing).
+        // Either way we must NOT navigate — there is no session.
+        if (r.error) {
+          setErrors({ general: r.error });
+          // Surface as a prominent alert too, so the exact Apple error code/cause is unmissable.
+          Alert.alert("Sign in with Apple", r.error);
+        }
+        return;
+      }
+      await AsyncStorage.setItem("@onboarding_done", "true");
+      router.replace("/tabs");
+    } finally {
+      setAppleBusy(false);
     }
   }
 
@@ -751,6 +777,26 @@ export default function LoginScreen() {
                       <View style={s.dividerLine} />
                     </View>
 
+                    {/* Sign in with Apple — iOS only, shown first per Apple HIG.
+                        Required by App Store Guideline 4.8 alongside Google. */}
+                    {appleAuthAvailable && (
+                      appleBusy ? (
+                        <View style={[s.appleBtn, { alignItems: "center", justifyContent: "center" }]}>
+                          <ActivityIndicator color="#fff" />
+                        </View>
+                      ) : (
+                        <AppleAuthentication.AppleAuthenticationButton
+                          buttonType={mode === "signup"
+                            ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
+                            : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                          cornerRadius={18}
+                          style={s.appleBtn}
+                          onPress={handleAppleSignIn}
+                        />
+                      )
+                    )}
+
                     <Pressable
                       onPress={handleGoogleSignIn}
                       disabled={googleBusy || busy}
@@ -1120,6 +1166,7 @@ const s = StyleSheet.create({
   ghostText: { color: BRAND.primaryInk, fontSize: 14 },
 
   // Google Sign-In
+  appleBtn: { height: 56, width: "100%", borderRadius: 18, marginBottom: 10 },
   googleBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
     gap: 10, height: 56, borderRadius: 18,
