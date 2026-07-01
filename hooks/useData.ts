@@ -17,6 +17,13 @@ import { supabasePublic, isSupabaseReady } from "@/lib/supabase";
 import { buildIndexMap, indexReturnPct, type IndexMap } from "@/lib/performance";
 import type { IndexUpdate } from "@/constants/index-catalog";
 
+// Rolling window (days) of daily index bars pulled for live benchmark computation.
+// PostgREST hard-caps a single response at 1000 rows, so a combined `.in([...])` query
+// returns only the OLDEST bars (2018–2020) and 2025/26 calls fall out of coverage (then
+// fall back to the stored nightly benchmark). Per-ticker windowed keeps each query under
+// the cap. Kept in sync with web/app/api/feed's INDEX_BARS_WINDOW_DAYS (~3.3yr).
+const INDEX_BARS_WINDOW_DAYS = 1200;
+
 // Override the stored benchmark with the index return over the call's holding period
 // (initiatedDate → now active / → closedDate closed) so EGX30/TASI is tied to the
 // initiation date (#1). Keeps the stored value when the index isn't covered yet.
@@ -587,9 +594,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           feedSelect("research_docs", "reportDate"),
           feedSelect("technical_articles", "createdAt"),
           feedSelect("index_updates", "createdAt"),
-          // EGX30 + TASI daily index bars → benchmark tied to the initiated date (#1).
-          (supabasePublic.from("price_bars").select("ticker,ts,closeP").in("ticker", ["EGX30", "TASI", "SPX"]).eq("interval", "1d").order("ts", { ascending: true }) as any)
-            .then((r: any) => r?.data ?? [], () => []),
+          // EGX30 / TASI / SPX daily index bars → matched-period benchmark (#1). Fetched
+          // PER TICKER + windowed so each query stays under PostgREST's 1000-row cap and
+          // covers recent calls (a combined query returned only the oldest 2018–2020 bars).
+          Promise.all((["EGX30", "TASI", "SPX"]).map((tk) =>
+            (supabasePublic!.from("price_bars").select("ticker,ts,closeP")
+              .eq("ticker", tk).eq("interval", "1d")
+              .gte("ts", Math.floor(Date.now() / 1000) - INDEX_BARS_WINDOW_DAYS * 86400)
+              .order("ts", { ascending: true }) as any)
+              .then((r: any) => r?.data ?? [], () => [] as any[])
+          )).then((parts: any[][]) => parts.flat(), () => [] as any[]),
         ]),
       ]);
 
