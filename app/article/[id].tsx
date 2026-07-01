@@ -1,15 +1,21 @@
-import { ScrollView, View, StyleSheet, Pressable } from "react-native";
+import { useState, useEffect } from "react";
+import { ScrollView, View, StyleSheet, Pressable, Image, Modal } from "react-native";
+import { WebView } from "react-native-webview";
 import { Text } from "@/components/shared/AppText";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import * as ScreenOrientation from "expo-screen-orientation";
+import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { Spacing, Radius, Typography } from "@/constants/theme";
 import { SignalBadge } from "@/components/shared/SignalBadge";
 import { useData } from "@/hooks/useData";
-import { useAuth } from "@/context/AuthContext";
 import { RichText, looksLikeHtml } from "@/lib/rich-text";
 import { fontFamilyFor } from "@/lib/typography";
+import { tradingViewChartHtml, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
+import { tvSymbol, tvInterval, parseTvStudies } from "@/lib/tv-symbol";
 
 export default function ArticleDetail() {
   const C = useColors();
@@ -17,13 +23,32 @@ export default function ArticleDetail() {
   const isAr = language === "ar";
   const ff = (w: "400" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { ARTICLES, SAUDI_ARTICLES } = useData();
-  const { premium, user, subscriptionsEnabled } = useAuth();
-  // Search both markets so a Saudi article resolves too (ARTICLES is Egypt-only).
-  const all = [...ARTICLES, ...SAUDI_ARTICLES];
+  const { ARTICLES, SAUDI_ARTICLES, USA_ARTICLES } = useData();
+  // Search every market so a Saudi/USA report resolves too (ARTICLES is Egypt-only).
+  // Without USA_ARTICLES a usa-market Technical Report hit the not-found screen.
+  const all = [...ARTICLES, ...SAUDI_ARTICLES, ...USA_ARTICLES];
   // No `?? all[0]` fallback: a stale/deleted id must hit the not-found screen below,
   // not silently render an unrelated report (audit mobile-H1).
   const article = all.find(a => a.id === id);
+
+  const { isDark } = useTheme();
+  // ── Technical Report interactive chart (same as a Live Signal) ──────────────
+  // Hooks must run unconditionally (before the not-found early return).
+  const [showLiveChart, setShowLiveChart] = useState(false);
+  const [chartAspect, setChartAspect] = useState(1.6);
+  // The live chart rotates to landscape (a wide canvas reads a trading chart best),
+  // restoring the app-wide portrait lock on close/unmount.
+  useEffect(() => {
+    if (!showLiveChart) return;
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    return () => { ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {}); };
+  }, [showLiveChart]);
+  // Real aspect ratio of the captured chart so it renders FULL (never cropped).
+  useEffect(() => {
+    const uri = article?.chartImage;
+    if (!uri) return;
+    Image.getSize(uri, (w, h) => { if (w > 0 && h > 0) setChartAspect(w / h); }, () => {});
+  }, [article?.chartImage]);
 
   // Graceful not-found instead of crashing when the list is empty / id is bad
   if (!article) {
@@ -51,6 +76,18 @@ export default function ArticleDetail() {
   const authorInitial = (authorName.trim().charAt(0) || "S").toUpperCase();
 
   const related = all.filter(a => a.id !== article.id && (a.ticker === article.ticker || a.section === article.section)).slice(0, 3);
+
+  // Technical Reports carry an analyst-drawn TradingView chart (captured image +
+  // live interactive chart), exactly like a Live Signal.
+  const isTechnical = article.section === "technical";
+  const chartImage = article.chartImage;
+  const techMarket: "egypt" | "saudi" | "usa" =
+    article.market === "saudi" || article.market === "usa"
+      ? article.market
+      : (/^\d{3,4}$/.test(article.ticker ?? "") ? "saudi" : "egypt");
+  const tvSym = isTechnical ? tvSymbol(article.ticker, techMarket, article.chartSymbol) : "";
+  const tvInt = isTechnical ? tvInterval(article.chartTimeframe, article.chartInterval) : "D";
+  const tvStudies = isTechnical ? parseTvStudies(article.chartStudies) : [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg.base }} edges={["top"]}>
@@ -131,31 +168,49 @@ export default function ArticleDetail() {
           </View>
         ) : null}
 
+        {/* Technical Report chart — captured analyst chart + live interactive chart */}
+        {isTechnical && (chartImage || tvSym) ? (
+          <View style={{ paddingHorizontal: Spacing[4], marginTop: Spacing[4], gap: Spacing[3] }}>
+            {chartImage ? (
+              <View style={[styles.analystChartCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}>
+                <View style={[styles.analystChartHeader, { borderBottomColor: C.border.subtle }, isRTL && { flexDirection: "row-reverse" }]}>
+                  <Ionicons name="stats-chart-outline" size={14} color={C.primary} />
+                  <Text style={[styles.analystChartTitle, { color: C.text.primary }]}>{isAr ? "رسم المحلل" : "Analyst's Chart"}</Text>
+                  {article.chartCaption ? (
+                    <Text style={[styles.analystChartCaption, { color: C.text.muted }]} numberOfLines={1}>· {article.chartCaption}</Text>
+                  ) : null}
+                </View>
+                <Image source={{ uri: chartImage }} style={{ width: "100%", aspectRatio: chartAspect, backgroundColor: C.bg.base }} resizeMode="contain" />
+              </View>
+            ) : null}
+            {tvSym ? (
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); setShowLiveChart(true); }}
+                style={[styles.liveCtaCard, { backgroundColor: `${C.primary}10`, borderColor: `${C.primary}33` }, isRTL && { flexDirection: "row-reverse" }]}
+              >
+                <View style={[styles.liveCtaIcon, { backgroundColor: `${C.primary}22` }]}>
+                  <Ionicons name="pulse" size={20} color={C.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.liveCtaTitle, { color: C.text.primary }, isRTL && { textAlign: "right" }]}>{isAr ? "افتح الرسم البياني المباشر" : "Open Live Interactive Chart"}</Text>
+                  <Text style={[styles.liveCtaSub, { color: C.text.muted }, isRTL && { textAlign: "right" }]}>{isAr ? "رسم تفاعلي — مؤشرات وأدوات رسم" : "Real-time chart — indicators & drawing tools"}</Text>
+                </View>
+                <View style={[styles.liveCtaBtn, { backgroundColor: C.primary }]}>
+                  <Ionicons name="eye-outline" size={14} color="#fff" />
+                  <Text style={styles.liveCtaBtnText}>{isAr ? "عرض" : "View"}</Text>
+                </View>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Article body — reader's language; rich HTML or plain paragraphs */}
         <View style={[styles.body, { paddingHorizontal: Spacing[4] }]}>
           {(() => {
             const body = isAr && article.bodyAr ? article.bodyAr : article.body;
-            const isReport = article.type === "article";
-            // Subscription paywall — ONLY shown when the paid model is live. While it's
-            // off, every report is fully open (premium is forced true), so this branch
-            // never runs and no payment language is ever shown.
-            if (subscriptionsEnabled && isReport && !premium) {
-              return (
-                <View style={[styles.lockedBox, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}>
-                  <Ionicons name="lock-closed" size={32} color={C.text.muted} />
-                  <Text style={[styles.lockedTitle, { color: C.text.primary }]}>{isAr ? "محتوى مميز" : "Premium"}</Text>
-                  <Text style={[styles.lockedSub, { color: C.text.muted }]}>
-                    {isAr ? "التقارير البحثية الكاملة متاحة لمشتركي Smart Signals — ابدأ بشهر مجاني." : "Full research reports are for Smart Signals subscribers — start with 1 month free."}
-                  </Text>
-                  <Pressable style={[styles.upgradeBtn, { backgroundColor: C.primary }]}
-                    onPress={() => router.push(user ? "/subscribe" : "/login")}>
-                    <Text style={styles.upgradeBtnText}>{user ? (isAr ? "اشترك الآن" : "Subscribe") : (isAr ? "تسجيل الدخول" : "Sign in")}</Text>
-                  </Pressable>
-                </View>
-              );
-            }
-            // No body yet → a neutral "not available" state (NEVER a paywall): the report
-            // simply has no content published. Keeps the free experience restriction-free.
+            // The app is fully free: every published report is open to any signed-in
+            // user. When a report has no body yet we show a neutral "not available"
+            // state — never a paywall.
             if (!body) {
               return (
                 <View style={[styles.lockedBox, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}>
@@ -229,11 +284,56 @@ export default function ArticleDetail() {
 
         <View style={{ height: Spacing[8] }} />
       </ScrollView>
+
+      {/* Live interactive chart — fullscreen TradingView WebView (landscape) */}
+      <Modal
+        visible={showLiveChart}
+        animationType="slide"
+        onRequestClose={() => setShowLiveChart(false)}
+        presentationStyle="fullScreen"
+        supportedOrientations={["portrait", "landscape-left", "landscape-right"]}
+      >
+        <SafeAreaProvider>
+          {showLiveChart ? <StatusBar hidden /> : null}
+          <SafeAreaView style={{ flex: 1, backgroundColor: C.bg.base }} edges={["top", "bottom", "left", "right"]}>
+            <View style={[styles.header, { borderBottomColor: C.border.subtle }, isRTL && { flexDirection: "row-reverse" }]}>
+              <Pressable
+                style={[styles.backBtn, { backgroundColor: C.bg.elevated }]}
+                onPress={() => { Haptics.selectionAsync(); setShowLiveChart(false); }}
+              >
+                <Ionicons name="close" size={22} color={C.text.primary} />
+              </Pressable>
+              <Text style={[styles.headerTitle, { color: C.text.primary }]}>{tvSym || article.ticker}</Text>
+              <View style={{ width: 36 }} />
+            </View>
+            {showLiveChart ? (
+              <WebView
+                source={{ html: tradingViewChartHtml(tvSym, tvInt, isDark ? "dark" : "light", isAr ? "ar" : "en", tvStudies), baseUrl: TV_BASE_URL }}
+                originWhitelist={["*"]}
+                javaScriptEnabled
+                domStorageEnabled
+                onShouldStartLoadWithRequest={webviewAllowRequest}
+                style={{ flex: 1, backgroundColor: C.bg.base }}
+              />
+            ) : null}
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  analystChartCard: { borderRadius: Radius.lg, borderWidth: 1, overflow: "hidden" },
+  analystChartHeader: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: Spacing[3], paddingVertical: Spacing[2], borderBottomWidth: 1 },
+  analystChartTitle: { fontSize: Typography.sm, fontWeight: "800" },
+  analystChartCaption: { fontSize: 11, flexShrink: 1 },
+  liveCtaCard: { flexDirection: "row", alignItems: "center", gap: Spacing[3], borderRadius: Radius.lg, borderWidth: 1, padding: Spacing[3] },
+  liveCtaIcon: { width: 44, height: 44, borderRadius: Radius.md, alignItems: "center", justifyContent: "center" },
+  liveCtaTitle: { fontSize: Typography.sm, fontWeight: "800" },
+  liveCtaSub: { fontSize: 11, marginTop: 2 },
+  liveCtaBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full },
+  liveCtaBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
   header: { flexDirection: "row", alignItems: "center", gap: Spacing[3], padding: Spacing[4], paddingVertical: Spacing[3], borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   headerTitle: { flex: 1, fontSize: Typography.base, fontWeight: "700", textAlign: "center" },
@@ -265,8 +365,6 @@ const styles = StyleSheet.create({
   lockedBox: { borderRadius: Radius.xl, borderWidth: 1, padding: Spacing[6], alignItems: "center", gap: Spacing[3] },
   lockedTitle: { fontSize: Typography.lg, fontWeight: "800" },
   lockedSub: { fontSize: Typography.sm, textAlign: "center", lineHeight: 20 },
-  upgradeBtn: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: Radius.xl, marginTop: Spacing[2] },
-  upgradeBtnText: { color: "#fff", fontWeight: "700", fontSize: Typography.base },
 
   sectionPad: { paddingHorizontal: Spacing[4] },
   takeawaysBox: { borderRadius: Radius.xl, borderWidth: 1, padding: Spacing[4], gap: Spacing[3] },

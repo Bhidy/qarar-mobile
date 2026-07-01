@@ -27,6 +27,16 @@ export interface Article {
   ticker?: string;
   coverImage?: string;
   section: "fundamental" | "technical" | "insights" | "macro" | "live";
+  market?: "egypt" | "saudi" | "usa" | "both";
+  // Interactive chart (Technical Reports only) — analyst-drawn TradingView chart
+  // captured to `chartImage`, with symbol/interval/indicators for the live chart.
+  chartTimeframe?: string;
+  chartImage?: string;
+  chartCaption?: string;
+  chartProvider?: string;
+  chartSymbol?: string;
+  chartInterval?: string;
+  chartStudies?: string;
 }
 
 export const ARTICLES: Article[] = [

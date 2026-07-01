@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { supabasePublic, isSupabaseReady } from "@/lib/supabase";
 import { buildIndexMap, indexReturnPct, type IndexMap } from "@/lib/performance";
+import type { IndexUpdate } from "@/constants/index-catalog";
 
 // Override the stored benchmark with the index return over the call's holding period
 // (initiatedDate → now active / → closedDate closed) so EGX30/TASI is tied to the
@@ -101,6 +102,7 @@ interface AppData {
   FUNDAMENTAL_CALLS: FundamentalCall[];
   TECHNICAL_CALLS:   TechnicalCall[];
   TECHNICAL_ARTICLES: TechnicalArticle[];
+  INDEX_UPDATES: IndexUpdate[];
   NEWS:              typeof STATIC_NEWS;
   PORTFOLIOS:        typeof STATIC_PORTFOLIOS;
   NOTIFICATIONS:     Notification[];
@@ -196,6 +198,15 @@ function toArticle(row: any): Article {
     tag:        row.tag ?? undefined,
     ticker:     primaryTicker(row.ticker),
     coverImage: row.coverImage ?? row.coverimage ?? undefined,
+    market:     row.market ?? undefined,
+    // Interactive chart (Technical Reports) — captured image + live chart config.
+    chartTimeframe: row.chartTimeframe ?? row.charttimeframe ?? undefined,
+    chartImage:     row.chartImage ?? row.chartimage ?? undefined,
+    chartCaption:   row.chartCaption ?? row.chartcaption ?? undefined,
+    chartProvider:  row.chartProvider ?? row.chartprovider ?? undefined,
+    chartSymbol:    row.chartSymbol ?? row.chartsymbol ?? undefined,
+    chartInterval:  row.chartInterval ?? row.chartinterval ?? undefined,
+    chartStudies:   row.chartStudies ?? row.chartstudies ?? undefined,
   };
 }
 
@@ -299,6 +310,29 @@ function toTechnicalArticle(row: any): TechnicalArticle {
     trend:           row.trend ?? undefined,
     published:       row.published,
   } as TechnicalArticle;
+}
+
+// Index Updates — analyst commentary on a market index (EGX30/EGX70/TASI/S&P 500/
+// Nasdaq 100/Dow Jones), distinct from per-stock Technical Calls. Mirrors
+// toTechnicalArticle's dual-case-read defensiveness.
+function toIndexUpdate(row: any): IndexUpdate {
+  return {
+    id:             row.id,
+    indexSymbol:    row.indexSymbol ?? row.indexsymbol ?? "",
+    market:         (row.market ?? "egypt"),
+    analyst:        row.analyst ?? undefined,
+    overview:       row.overview ?? undefined,
+    currentPrice:   row.currentPrice != null ? Number(row.currentPrice) : (row.currentprice != null ? Number(row.currentprice) : undefined),
+    title:          row.title ?? "",
+    titleAr:        row.titleAr ?? row.titlear ?? undefined,
+    body:           row.body ?? undefined,
+    bodyAr:         row.bodyAr ?? row.bodyar ?? undefined,
+    chartSymbol:    row.chartSymbol ?? row.chartsymbol ?? undefined,
+    chartInterval:  row.chartInterval ?? row.chartinterval ?? undefined,
+    chartImage:     row.chartImage ?? row.chartimage ?? undefined,
+    date:           row.date ?? undefined,
+    published:      row.published,
+  } as IndexUpdate;
 }
 
 function toSaudiStock(row: any): SaudiStock {
@@ -450,6 +484,7 @@ function initialData(): DataState {
     FUNDAMENTAL_CALLS: mk(STATIC_FUND, []),
     TECHNICAL_CALLS:   mk(STATIC_TECH, []),
     TECHNICAL_ARTICLES: [],
+    INDEX_UPDATES:     [],
     NEWS:              mk(STATIC_NEWS, []),
     PORTFOLIOS:        mk(STATIC_PORTFOLIOS, []),
     NOTIFICATIONS:     mk(STATIC_NOTIFICATIONS, []),
@@ -535,7 +570,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           { data: portfolioRows },
           { data: notifRows },
         ],
-        [priceRows, companyRows, researchRows, techArticleRows, indexRows],
+        [priceRows, companyRows, researchRows, techArticleRows, indexUpdateRows, indexRows],
       ] = await Promise.all([
         Promise.all([
           supabasePublic.from("articles").select("*").order("createdAt", { ascending: false }),
@@ -551,6 +586,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           feedSelect("companies"),
           feedSelect("research_docs", "reportDate"),
           feedSelect("technical_articles", "createdAt"),
+          feedSelect("index_updates", "createdAt"),
           // EGX30 + TASI daily index bars → benchmark tied to the initiated date (#1).
           (supabasePublic.from("price_bars").select("ticker,ts,closeP").in("ticker", ["EGX30", "TASI", "SPX"]).eq("interval", "1d").order("ts", { ascending: true }) as any)
             .then((r: any) => r?.data ?? [], () => []),
@@ -566,7 +602,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const indexMap = buildIndexMap(indexRows ?? []); // EGX30/TASI daily bars (#1)
 
       // If all tables empty, keep static data (not seeded yet) but surface live feeds.
-      if (!articles?.length && !fundCalls?.length && !techArticleRows?.length) {
+      if (!articles?.length && !fundCalls?.length && !techArticleRows?.length && !indexUpdateRows?.length) {
         setData(d => ({ ...d, PRICES, COMPANIES, RESEARCH_DOCS, loading: false }));
         return;
       }
@@ -598,12 +634,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // Technical Articles — published, normalized, all markets (the screen filters by
       // the active market with a "both"-tolerant check).
       const techArticles = (techArticleRows ?? []).filter(isPub).map(toTechnicalArticle);
+      const indexUpdates = (indexUpdateRows ?? []).filter(isPub).map(toIndexUpdate);
 
       commit({
         ARTICLES:          egxArticles.length   > 0 ? egxArticles.map(toArticle)          : mk(STATIC_ARTICLES, []),
         FUNDAMENTAL_CALLS: egxFund.length       > 0 ? applyBenchmark(applyLivePrices(egxFund.map(toFundamental), PRICES, "remaining"), indexMap, "egypt") : mk(STATIC_FUND, []),
         TECHNICAL_CALLS:   egxTech.length       > 0 ? applyLivePrices(egxTech.map(toTechnical), PRICES, "return")     : mk(STATIC_TECH, []),
         TECHNICAL_ARTICLES: techArticles,
+        INDEX_UPDATES:     indexUpdates,
         NEWS:              egxNews.length        > 0 ? egxNews                             : mk(STATIC_NEWS, []),
         PORTFOLIOS:        (portfolioRows ?? []).length > 0
           ? (portfolioRows as any[]).map(p => ({
@@ -723,7 +761,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
     const HOT_TABLES = [
       "prices", "fundamental_calls", "technical_calls",
-      "news_items", "notifications", "articles", "technical_articles",
+      "news_items", "notifications", "articles", "technical_articles", "index_updates",
     ];
     let channel = sb.channel("ss-live");
     for (const table of HOT_TABLES) {
