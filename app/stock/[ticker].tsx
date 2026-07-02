@@ -22,6 +22,7 @@ import { ConvictionMark } from "@/components/shared/ConvictionMark";
 import { WEB_BASE } from "@/constants/site";
 import { tradingViewChartHtml, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
 import { tvSymbol, tvInterval, parseTvStudies } from "@/lib/tv-symbol";
+import { getMarketStatus, formatAsOfLocal, type MarketKey } from "@/lib/market-status";
 
 /** Rich body (HTML) or plain text + a "view full report" link for complex tables. */
 function RichBody({ html, label, accent, C, isRTL, ff, ticker }: {
@@ -64,7 +65,7 @@ export default function StockDetail() {
   const ff = (w: "400" | "600" | "700" | "800") => fontFamilyFor(language === "ar", w);
   const isAr = language === "ar";
   const { ticker } = useLocalSearchParams<{ ticker: string }>();
-  const { FUNDAMENTAL_CALLS, TECHNICAL_CALLS, SAUDI_FUNDAMENTAL, SAUDI_TECHNICAL, ARTICLES, PRICES, COMPANIES } = useData();
+  const { FUNDAMENTAL_CALLS, TECHNICAL_CALLS, SAUDI_FUNDAMENTAL, SAUDI_TECHNICAL, ARTICLES, PRICES, COMPANIES, MARKET_CALENDAR } = useData();
 
   // Market-aware lookup: a ticker may belong to the Egypt OR the Saudi (Tadawul)
   // cohort, so search both arrays. (Previously only the EGX arrays were read, so
@@ -142,7 +143,19 @@ export default function StockDetail() {
   const change = liveChange ?? histChange;
   const hasChange = change != null && Number.isFinite(change);
   const changeColor = (change ?? 0) >= 0 ? upColor : dnColor;
-  const changeSuffix = liveChange != null ? (live?.delayed ? "today · 15m delayed" : "today") : "(30d)";
+  // Status-aware suffix: "15m delayed" only while the market is actually OPEN.
+  // When it's a weekend/holiday/after-hours, say so — a frozen price labeled
+  // "today · 15m delayed" reads as a broken feed (2026-07-02 audit).
+  const stMarketKey: MarketKey = (live?.market === "usa" || live?.market === "saudi") ? live.market : "egypt";
+  const stStatus = getMarketStatus(stMarketKey, MARKET_CALENDAR);
+  const stAsOf = formatAsOfLocal(live?.asOf, stMarketKey);
+  const changeSuffix = liveChange != null
+    ? (stStatus.state === "open"
+        ? `${isAr ? "اليوم" : "today"}${live?.delayed ? (isAr ? " · بتأخير ١٥ د" : " · 15m delayed") : ""}${stAsOf ? ` · ${stAsOf}` : ""}`
+        : stStatus.state === "holiday"
+        ? (isAr ? "عطلة رسمية — آخر إغلاق" : "holiday — last close")
+        : (isAr ? "السوق مغلق — آخر إغلاق" : "market closed — last close"))
+    : "(30d)";
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg.base }} edges={["top"]}>

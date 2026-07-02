@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { supabasePublic, isSupabaseReady } from "@/lib/supabase";
 import { buildIndexMap, indexReturnPct, type IndexMap } from "@/lib/performance";
+import type { HolidayRow } from "@/lib/market-status";
 import type { IndexUpdate } from "@/constants/index-catalog";
 
 // Rolling window (days) of daily index bars pulled for live benchmark computation.
@@ -125,6 +126,9 @@ interface AppData {
   PRICES:            Record<string, any>;
   COMPANIES:         Record<string, any>;
   RESEARCH_DOCS:     any[];
+  // Ad-hoc market closures (market_calendar rows) — feeds lib/market-status so the
+  // UI can say "Market Closed — Holiday" instead of showing a silently frozen price.
+  MARKET_CALENDAR:   HolidayRow[];
   loading:           boolean;
   /** Manual refetch for pull-to-refresh. */
   refetch:           () => Promise<void>;
@@ -480,7 +484,7 @@ async function feedSelect(table: string, orderCol?: string): Promise<any[]> {
 }
 
 type DataState = Omit<AppData, "refetch" | "markNotificationRead" | "markAllNotificationsRead">;
-const CACHE_KEY = "@data_cache_v1"; // bump the suffix to invalidate the cached shape
+const CACHE_KEY = "@data_cache_v2"; // bump the suffix to invalidate the cached shape (v2: +MARKET_CALENDAR)
 
 // Production NEVER shows fabricated sample data as if it were live signals.
 // Static seeds are DEV-only; in prod an empty/failed fetch yields [] so screens
@@ -506,6 +510,7 @@ function initialData(): DataState {
     PRICES:            {},
     COMPANIES:         {},
     RESEARCH_DOCS:     [],
+    MARKET_CALENDAR:   [],
     loading:           isSupabaseReady,
   };
 }
@@ -577,7 +582,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           { data: portfolioRows },
           { data: notifRows },
         ],
-        [priceRows, companyRows, researchRows, techArticleRows, indexUpdateRows, indexRows],
+        [priceRows, companyRows, researchRows, techArticleRows, indexUpdateRows, indexRows, calendarRows],
       ] = await Promise.all([
         Promise.all([
           supabasePublic.from("articles").select("*").order("createdAt", { ascending: false }),
@@ -604,6 +609,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               .order("ts", { ascending: true }) as any)
               .then((r: any) => r?.data ?? [], () => [] as any[])
           )).then((parts: any[][]) => parts.flat(), () => [] as any[]),
+          // Ad-hoc closures (holidays / half-days) → lib/market-status → honest
+          // "Market Closed / Holiday" states instead of silently frozen prices.
+          feedSelect("market_calendar"),
         ]),
       ]);
 
@@ -614,10 +622,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       (companyRows ?? []).forEach((c: any) => { if (c?.ticker) COMPANIES[String(c.ticker).toUpperCase()] = c; });
       const RESEARCH_DOCS = (researchRows ?? []) as any[];
       const indexMap = buildIndexMap(indexRows ?? []); // EGX30/TASI daily bars (#1)
+      const MARKET_CALENDAR = (calendarRows ?? []) as HolidayRow[];
 
       // If all tables empty, keep static data (not seeded yet) but surface live feeds.
       if (!articles?.length && !fundCalls?.length && !techArticleRows?.length && !indexUpdateRows?.length) {
-        setData(d => ({ ...d, PRICES, COMPANIES, RESEARCH_DOCS, loading: false }));
+        setData(d => ({ ...d, PRICES, COMPANIES, RESEARCH_DOCS, MARKET_CALENDAR, loading: false }));
         return;
       }
 
@@ -693,6 +702,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         USA_TECHNICAL:     usaTech.length       > 0 ? applyLivePrices(usaTech.map(toUsaTechnical), PRICES, "return") : mk(STATIC_USA_TECH, []),
         USA_NEWS:          usaNews.length       > 0 ? usaNews                             : mk(STATIC_USA_NEWS, []),
         USA_ARTICLES:      usaArticles.length   > 0 ? usaArticles.map(toArticle)         : mk(STATIC_USA_ARTICLES, []),
+        MARKET_CALENDAR,
         PRICES,
         COMPANIES,
         RESEARCH_DOCS,

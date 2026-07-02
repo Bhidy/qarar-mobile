@@ -20,6 +20,7 @@ import { useViewMore } from "@/hooks/useViewMore";
 import { useData } from "@/hooks/useData";
 import { fontFamilyFor } from "@/lib/typography";
 import { computeOverallPerformance, fmtPct } from "@/lib/performance";
+import { getMarketStatus, formatAsOfLocal, type MarketKey } from "@/lib/market-status";
 
 export default function HomeScreen() {
   const C = useColors();
@@ -34,7 +35,7 @@ export default function HomeScreen() {
     ARTICLES, FUNDAMENTAL_CALLS, TECHNICAL_CALLS, NEWS, NOTIFICATIONS,
     SAUDI_FUNDAMENTAL, SAUDI_TECHNICAL, SAUDI_NEWS, SAUDI_ARTICLES,
     USA_FUNDAMENTAL, USA_TECHNICAL, USA_NEWS, USA_ARTICLES, PRICES,
-    loading, refetch,
+    MARKET_CALENDAR, loading, refetch,
   } = useData();
   // Live EGX30/TASI from the Mubasher feed. When the feed has no index value we
   // show "—" (NOT a hard-coded number) — surfacing a fake, never-changing index %
@@ -43,6 +44,23 @@ export default function HomeScreen() {
   const hasLiveIdx = typeof liveIdx?.changePct === "number";
   const idxPct = hasLiveIdx ? (liveIdx!.changePct as number) : 0;
   const idxValue = hasLiveIdx ? `${idxPct >= 0 ? "+" : ""}${idxPct.toFixed(2)}%` : "—";
+  // Honest freshness line: a frozen index with no context reads as a bug (the
+  // 2026-07-02 EGX holiday). Status is computed locally from market_calendar +
+  // session times, so it's correct even between polls.
+  const idxMarketKey: MarketKey = market === "usa" ? "usa" : market === "saudi" ? "saudi" : "egypt";
+  const idxStatus = getMarketStatus(idxMarketKey, MARKET_CALENDAR);
+  const idxAsOf = formatAsOfLocal(liveIdx?.asOf, idxMarketKey);
+  const idxAr = language === "ar";
+  const idxSub =
+    idxStatus.state === "open"
+      ? `${liveIdx?.delayed ? (idxAr ? "بتأخير ١٥ د" : "15m delayed") : (idxAr ? "مباشر" : "Live")}${idxAsOf ? ` · ${idxAsOf}` : ""}`
+      : idxStatus.state === "preopen"
+      ? (idxAr ? "ما قبل الافتتاح" : "Pre-open")
+      : idxStatus.state === "holiday"
+      ? (idxAr ? "عطلة رسمية" : "Holiday")
+      : idxStatus.state === "weekend"
+      ? (idxAr ? "السوق مغلق" : "Closed · weekend")
+      : (idxAr ? "السوق مغلق" : "Market closed");
   const [callsTab, setCallsTab]   = useState<"fundamental" | "technical">("fundamental");
   const [callsView, setCallsView] = useState<"cards" | "list">("cards");
   const [marketModalVisible, setMarketModalVisible] = useState(false);
@@ -163,13 +181,18 @@ export default function HomeScreen() {
           {/* Quick stats */}
           <View style={[styles.statsRow, isRTL && styles.rowRTL]}>
             {[
-              { label: indexLabel, value: idxValue, color: !hasLiveIdx ? C.text.primary : (idxPct >= 0 ? C.primary : C.accent.red) },
-              { label: isAr ? "التوصيات" : "Active Calls", value: String(activeCallsCount), color: C.text.primary },
-              { label: isAr ? "متوسط العائد" : "Avg Return", value: avgReturnStr, color: avgReturnNum == null ? C.text.primary : (avgReturnNum >= 0 ? C.primary : C.accent.red) },
+              { label: indexLabel, value: idxValue, color: !hasLiveIdx ? C.text.primary : (idxPct >= 0 ? C.primary : C.accent.red), sub: idxSub },
+              { label: isAr ? "التوصيات" : "Active Calls", value: String(activeCallsCount), color: C.text.primary, sub: null as string | null },
+              { label: isAr ? "متوسط العائد" : "Avg Return", value: avgReturnStr, color: avgReturnNum == null ? C.text.primary : (avgReturnNum >= 0 ? C.primary : C.accent.red), sub: null as string | null },
             ].map(stat => (
               <View key={stat.label} style={[styles.statCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}>
                 <Text style={[styles.statLabel, { color: C.text.muted, fontFamily: fontFamily("600") }]}>{stat.label}</Text>
                 <Text style={[styles.statValue, { color: stat.color, fontFamily: fontFamily("800") }]}>{stat.value}</Text>
+                {stat.sub ? (
+                  <Text style={{ color: C.text.muted, fontSize: 9, marginTop: 2, fontFamily: fontFamily("500") }} numberOfLines={1}>
+                    {stat.sub}
+                  </Text>
+                ) : null}
               </View>
             ))}
           </View>
