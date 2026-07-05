@@ -362,7 +362,26 @@ function TechCallCard({
   const C = useColors();
   const upColor = C.primary;
   const dnColor = C.accent.red;
+  // Data-integrity hardened (mirror of stock detail): a missing level/return must
+  // never render as a fabricated "EGP 0.00" / "+0.00%" (a fake "sell at 0" is
+  // dangerous). Any non-positive price/level is treated as "no value" → localized dash.
+  const dash = isAr ? "غير متاح" : "—";
+  const num = (v: any): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const hasEntry = num(call.entryMin) > 0 && num(call.entryMax) > 0;
+  const hasTarget = num(call.targetPrice) > 0;
+  const hasStop = num(call.stopLoss) > 0;
+  // The card Return headline is only meaningful when a real target + entry back it
+  // (return = upside to target). No entry/target ⇒ the stored return is a fake 0 ⇒ dash.
+  const hasReturn = Number.isFinite(call.return as any) && hasTarget && hasEntry;
   const retColor = call.return >= 0 ? upColor : dnColor;
+  // Progress-to-target denominator: the call's total target upside %. Guard against
+  // entryMin=0 (div-by-zero → NaN% bar) — only render the progress section when it's
+  // a finite, non-zero denominator.
+  const progressDenom = hasEntry ? (call.targetPrice / call.entryMin - 1) * 100 : 0;
+  const hasProgress = hasReturn && Number.isFinite(progressDenom) && progressDenom !== 0;
+  const progressPct = hasProgress
+    ? Math.min(Math.max(Math.round(Math.abs(call.return / progressDenom) * 100), 0), 100)
+    : 0;
   const updates = visibleCallUpdates((call as any).updates);
   const lastUpdated = updates[0]?.date ?? (call as any).updatedDate;
 
@@ -399,8 +418,8 @@ function TechCallCard({
           <Text style={[styles.returnLabel, { color: C.text.muted, fontFamily: fontFamily("600") }]}>
             {closed ? (isAr ? "محقق" : "Realized") : (isAr ? "العائد" : "Return")}
           </Text>
-          <Text style={[styles.returnValue, { color: retColor }]}>
-            {call.return > 0 ? "+" : ""}{call.return.toFixed(2)}%
+          <Text style={[styles.returnValue, { color: hasReturn ? retColor : C.text.muted }]}>
+            {hasReturn ? `${call.return > 0 ? "+" : ""}${call.return.toFixed(2)}%` : dash}
           </Text>
         </View>
       </View>
@@ -439,9 +458,9 @@ function TechCallCard({
 
       {/* Price levels */}
       <View style={styles.priceGrid}>
-        <PriceItem label={isAr ? "نطاق الشراء" : "Buy Range"} value={`${currency} ${call.entryMin}–${call.entryMax}`} color={C.text.primary} C={C} fontFamily={fontFamily} />
+        <PriceItem label={isAr ? "نطاق الشراء" : "Buy Range"} value={hasEntry ? `${currency} ${call.entryMin}–${call.entryMax}` : dash} color={C.text.primary} C={C} fontFamily={fontFamily} />
         <View style={[styles.priceDivider, { backgroundColor: C.border.subtle }]} />
-        <PriceItem label={isAr ? "الهدف TP1" : "Target TP1"} value={`${currency} ${call.targetPrice.toFixed(2)}`} color={upColor} C={C} fontFamily={fontFamily} />
+        <PriceItem label={isAr ? "الهدف TP1" : "Target TP1"} value={hasTarget ? `${currency} ${call.targetPrice.toFixed(2)}` : dash} color={upColor} C={C} fontFamily={fontFamily} />
         {(call as any).tp2 ? (
           <>
             <View style={[styles.priceDivider, { backgroundColor: C.border.subtle }]} />
@@ -455,31 +474,34 @@ function TechCallCard({
           </>
         ) : null}
         <View style={[styles.priceDivider, { backgroundColor: C.border.subtle }]} />
-        <PriceItem label={isAr ? "وقف الخسارة الجريء" : "Risky SL"} value={`${currency} ${call.stopLoss.toFixed(2)}`} color={dnColor} C={C} fontFamily={fontFamily} />
+        <PriceItem label={isAr ? "وقف الخسارة الجريء" : "Risky SL"} value={hasStop ? `${currency} ${call.stopLoss.toFixed(2)}` : dash} color={dnColor} C={C} fontFamily={fontFamily} />
         <View style={[styles.priceDivider, { backgroundColor: C.border.subtle }]} />
         <PriceItem label={isAr ? "الحالي" : "Current"} value={(typeof call.currentPrice === "number" && call.currentPrice > 0) ? `${currency} ${call.currentPrice.toFixed(2)}` : (isAr ? "غير متاح" : "—")} color={C.text.secondary} C={C} fontFamily={fontFamily} />
       </View>
 
-      {/* Progress to target */}
-      <View style={styles.progressSection}>
-        <View style={styles.progressLabels}>
-          <Text style={[styles.progressText, { color: C.text.muted, fontFamily: fontFamily("600") }]}>
-            {isAr ? "التقدم نحو الهدف" : "Progress to target"}
-          </Text>
-          <Text style={[styles.progressPct, { color: retColor }]}>
-            {Math.min(Math.round(Math.abs(call.return / ((call.targetPrice / call.entryMin - 1) * 100)) * 100), 100)}%
-          </Text>
+      {/* Progress to target — hidden when there's no valid entry/target to measure
+          against (entryMin=0 would divide-by-zero into a "NaN%" bar). */}
+      {hasProgress ? (
+        <View style={styles.progressSection}>
+          <View style={styles.progressLabels}>
+            <Text style={[styles.progressText, { color: C.text.muted, fontFamily: fontFamily("600") }]}>
+              {isAr ? "التقدم نحو الهدف" : "Progress to target"}
+            </Text>
+            <Text style={[styles.progressPct, { color: retColor }]}>
+              {progressPct}%
+            </Text>
+          </View>
+          <View style={[styles.progressBar, { backgroundColor: C.bg.elevated }]}>
+            <View style={[
+              styles.progressFill,
+              {
+                width: `${progressPct}%`,
+                backgroundColor: retColor,
+              }
+            ]} />
+          </View>
         </View>
-        <View style={[styles.progressBar, { backgroundColor: C.bg.elevated }]}>
-          <View style={[
-            styles.progressFill,
-            {
-              width: `${Math.min(Math.max(Math.round(Math.abs(call.return / ((call.targetPrice / call.entryMin - 1) * 100)) * 100), 0), 100)}%`,
-              backgroundColor: retColor,
-            }
-          ]} />
-        </View>
-      </View>
+      ) : null}
 
       {call.notes ? (
         <View style={[styles.notesBox, { borderTopColor: C.border.subtle }]}>

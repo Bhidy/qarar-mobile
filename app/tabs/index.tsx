@@ -75,18 +75,21 @@ export default function HomeScreen() {
 
   const latestContent = isUsa ? USA_ARTICLES.slice(0, 5) : isSaudi ? SAUDI_ARTICLES.slice(0, 5) : ARTICLES.slice(0, 5);
 
-  // Market-aware calls
-  const fundCalls = isUsa
-    ? USA_FUNDAMENTAL.map(c => ({ ticker: c.ticker, signal: c.signal, return: c.remaining, articleId: undefined }))
-    : isSaudi
-    ? SAUDI_FUNDAMENTAL.map(c => ({ ticker: c.ticker, signal: c.signal, return: c.remaining, articleId: undefined }))
-    : FUNDAMENTAL_CALLS.map(c => ({ ticker: c.ticker, signal: c.signal, return: c.remaining, articleId: c.articleId }));
-
-  const techCalls = isUsa
-    ? USA_TECHNICAL.map(c => ({ ticker: c.ticker, signal: c.signal, return: c.return }))
-    : isSaudi
-    ? SAUDI_TECHNICAL.map(c => ({ ticker: c.ticker, signal: c.signal, return: c.return }))
-    : TECHNICAL_CALLS.map(c => ({ ticker: c.ticker, signal: c.signal, return: c.return }));
+  // Market-aware calls. `hasReturn` gates the return display: a fundamental upside
+  // is only real when a live price AND a target back it; a technical return only when
+  // target + entry back it. Otherwise the stored return is a fabricated 0 → we render
+  // a dash instead of "+0.0%" (mirror of the detail/list data-integrity fix).
+  const pos = (v: any): boolean => typeof v === "number" && Number.isFinite(v) && v > 0;
+  const mapFund = (c: any) => ({
+    ticker: c.ticker, signal: c.signal, return: c.remaining, articleId: c.articleId,
+    hasReturn: Number.isFinite(c.remaining) && pos(c.currentPrice) && pos(c.targetPrice),
+  });
+  const mapTech = (c: any) => ({
+    ticker: c.ticker, signal: c.signal, return: c.return,
+    hasReturn: Number.isFinite(c.return) && pos(c.targetPrice) && pos(c.entryMin) && pos(c.entryMax),
+  });
+  const fundCalls = (isUsa ? USA_FUNDAMENTAL : isSaudi ? SAUDI_FUNDAMENTAL : FUNDAMENTAL_CALLS).map(mapFund);
+  const techCalls = (isUsa ? USA_TECHNICAL : isSaudi ? SAUDI_TECHNICAL : TECHNICAL_CALLS).map(mapTech);
 
   const activeCalls = callsTab === "fundamental" ? fundCalls : techCalls;
   // Cap the calls preview at 5 rows with a "View more" control (loads 5 more);
@@ -321,7 +324,8 @@ export default function HomeScreen() {
                 />
               ) : callsPager.items.map((item, idx) => {
                 const isPos = item.return >= 0;
-                const pct = Math.min(Math.abs(item.return), 100);
+                // No real price behind the return ⇒ dash the value + zero (hide) the bar.
+                const pct = item.hasReturn ? Math.min(Math.abs(item.return), 100) : 0;
                 return (
                   <Pressable
                     key={`${item.ticker}_${idx}`}
@@ -340,14 +344,16 @@ export default function HomeScreen() {
                         <Text style={[styles.ticker, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>{item.ticker}</Text>
                         <SignalBadge signal={item.signal} size="sm" />
                       </View>
-                      <Text style={[styles.cardReturn, { color: isPos ? C.primary : C.accent.red }]}>
-                        {item.return > 0 ? "+" : ""}{item.return.toFixed(1)}%
+                      <Text style={[styles.cardReturn, { color: item.hasReturn ? (isPos ? C.primary : C.accent.red) : C.text.muted }]}>
+                        {item.hasReturn ? `${item.return > 0 ? "+" : ""}${item.return.toFixed(1)}%` : (isAr ? "غير متاح" : "—")}
                       </Text>
                     </View>
-                    {/* Progress bar */}
-                    <View style={[styles.progressBg, { backgroundColor: C.bg.elevated }]}>
-                      <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: isPos ? C.primary : C.accent.red }]} />
-                    </View>
+                    {/* Progress bar — hidden when there's no real return behind it. */}
+                    {item.hasReturn ? (
+                      <View style={[styles.progressBg, { backgroundColor: C.bg.elevated }]}>
+                        <View style={[styles.progressFill, { width: `${pct}%` as any, backgroundColor: isPos ? C.primary : C.accent.red }]} />
+                      </View>
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -393,9 +399,9 @@ export default function HomeScreen() {
                   <Text style={[
                     styles.returnVal,
                     { flex: 1, textAlign: isAr ? "left" : "right" },
-                    { color: item.return >= 0 ? C.primary : C.accent.red },
+                    { color: item.hasReturn ? (item.return >= 0 ? C.primary : C.accent.red) : C.text.muted },
                   ]}>
-                    {item.return > 0 ? "+" : ""}{item.return.toFixed(2)}%
+                    {item.hasReturn ? `${item.return > 0 ? "+" : ""}${item.return.toFixed(2)}%` : (isAr ? "غير متاح" : "—")}
                   </Text>
                 </Pressable>
               ))}

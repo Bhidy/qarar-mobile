@@ -231,6 +231,12 @@ function FeaturedArticle({
   const match = calls.find(c => c?.ticker === featured.ticker);
   const upside = match?.remaining;
   const target = match?.targetPrice;
+  // Data-integrity: a target/upside is only real when a real price backs it. The old
+  // gate passed for target=0 (0 IS a number) → "EGP 0.00" + a fake upside. Require a
+  // positive target + current price; otherwise the whole stats row is omitted.
+  const matchHasPrice = typeof match?.currentPrice === "number" && match.currentPrice > 0;
+  const hasTarget = typeof target === "number" && target > 0;
+  const hasUpside = typeof upside === "number" && Number.isFinite(upside) && matchHasPrice && hasTarget;
   const title = isAr && featured.titleAr ? featured.titleAr : featured.title;
   const subtitle = isAr && featured.subtitleAr ? featured.subtitleAr : featured.subtitle;
   const upColor = (upside ?? 0) >= 0 ? C.primary : C.accent.red;
@@ -274,26 +280,30 @@ function FeaturedArticle({
             </Text>
           ) : null}
 
-          {typeof upside === "number" && typeof target === "number" ? (
+          {hasTarget ? (
             <View style={[styles.featuredStatsRow, isRTL && styles.rowRTL]}>
-              <View style={[styles.featuredStatPill, isRTL && styles.rowRTL]}>
-                <Ionicons
-                  name={upside >= 0 ? "trending-up" : "trending-down"}
-                  size={14}
-                  color={upColor}
-                />
-                <Text style={[styles.featuredStatValue, { color: upColor, fontFamily: fontFamily("800") }]}>
-                  {upside > 0 ? "+" : ""}{upside.toFixed(1)}%
-                </Text>
-                <Text style={[styles.featuredStatLabel, { color: C.text.muted, fontFamily: fontFamily("400") }]}>
-                  {upside >= 0 ? (isAr ? "صعود" : "upside") : (isAr ? "هبوط" : "downside")}
-                </Text>
-              </View>
-              <View style={[styles.featuredStatDivider, { backgroundColor: C.border.subtle }]} />
+              {hasUpside ? (
+                <>
+                  <View style={[styles.featuredStatPill, isRTL && styles.rowRTL]}>
+                    <Ionicons
+                      name={(upside as number) >= 0 ? "trending-up" : "trending-down"}
+                      size={14}
+                      color={upColor}
+                    />
+                    <Text style={[styles.featuredStatValue, { color: upColor, fontFamily: fontFamily("800") }]}>
+                      {(upside as number) > 0 ? "+" : ""}{(upside as number).toFixed(1)}%
+                    </Text>
+                    <Text style={[styles.featuredStatLabel, { color: C.text.muted, fontFamily: fontFamily("400") }]}>
+                      {(upside as number) >= 0 ? (isAr ? "صعود" : "upside") : (isAr ? "هبوط" : "downside")}
+                    </Text>
+                  </View>
+                  <View style={[styles.featuredStatDivider, { backgroundColor: C.border.subtle }]} />
+                </>
+              ) : null}
               <Text style={[styles.featuredStatLabel, { color: C.text.muted, fontFamily: fontFamily("400") }]}>
                 {isAr ? "الهدف" : "Target"}{" "}
                 <Text style={[styles.featuredTargetValue, { color: C.primary, fontFamily: fontFamily("700") }]}>
-                  {currency} {target.toFixed(2)}
+                  {currency} {(target as number).toFixed(2)}
                 </Text>
               </Text>
             </View>
@@ -366,7 +376,10 @@ function CallCard({
   const thesisText = isAr && "thesisAr" in call ? call.thesisAr : call.thesis;
   const companyName = isAr && "companyAr" in call ? (call as any).companyAr : call.company;
   const benchmarkValue = "egx30" in call ? (call as any).egx30 : "sp500" in call ? (call as any).sp500 : (call as any).tadawul;
-  const benchmarkColor = (benchmarkValue ?? 0) >= 0 ? C.primary : C.accent.red;
+  // A missing benchmark is null/undefined (the ingest explicitly forbids 0% — a fake
+  // flat market inflates alpha). Render the dash, not "+0.00%", when it's absent.
+  const hasBenchmark = typeof benchmarkValue === "number" && Number.isFinite(benchmarkValue);
+  const benchmarkColor = hasBenchmark ? (benchmarkValue >= 0 ? C.primary : C.accent.red) : C.text.muted;
   const articleId = "articleId" in call ? call.articleId : undefined;
   const updates = visibleCallUpdates((call as any).updates);
   const lastUpdated = updates[0]?.date ?? (call as any).updatedDate;
@@ -462,7 +475,7 @@ function CallCard({
                 {benchmarkLabel}
               </Text>
               <Text style={[styles.expandedValue, { color: benchmarkColor }]}>
-                {(benchmarkValue ?? 0) > 0 ? "+" : ""}{(benchmarkValue ?? 0).toFixed(2)}%
+                {hasBenchmark ? `${benchmarkValue > 0 ? "+" : ""}${benchmarkValue.toFixed(2)}%` : dash}
               </Text>
             </View>
             <View style={[styles.expandedStat, { backgroundColor: C.bg.overlay }]}>
