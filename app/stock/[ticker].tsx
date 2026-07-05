@@ -101,20 +101,54 @@ export default function StockDetail() {
     if (!uri) return;
     Image.getSize(uri, (w, h) => { if (w > 0 && h > 0) setChartAspect(w / h); }, () => {});
   }, [(techCall as any)?.chartImage]);
-  // Signature ConvictionMark value = the call's REAL upside (fundamental) or
-  // return (technical). Null when there's no call → the mark is not shown.
-  const convictionValue: number | null = isFund
-    ? (typeof fundCall?.remaining === "number" ? fundCall.remaining : null)
-    : (typeof techCall?.return === "number" ? techCall.return : null);
   const markUp = isDark ? "#5FCF6A" : "#1E8C3C";
   const markDown = isDark ? "#E4615A" : "#C53030";
-  const callPrice = isFund ? (fundCall.currentPrice ?? 0) : (techCall?.currentPrice ?? 0);
   const live = PRICES[(ticker ?? "").toUpperCase()];        // real Mubasher snapshot, if synced
   const profile = COMPANIES[(ticker ?? "").toUpperCase()];  // real company profile (RT=30), if synced
-  const currentPrice = live?.lastPrice ?? callPrice;        // prefer live price
-  const hasPrice = typeof currentPrice === "number" && currentPrice > 0;
+
+  // ── Price / metric resolution (data-integrity hardened 2026-07-05) ──────────
+  // Mirror of web/app/(dashboard)/stock/[ticker]/page.tsx. A MISSING price must
+  // NEVER render as "EGP 0.00" or feed 0 into % math — any non-positive price is
+  // treated as "no price" and surfaced as "—" (AR "غير متاح"). A CLOSED fundamental
+  // call shows its frozen exit price (closedPrice) — not a live feed quote — and
+  // never renders a live/delayed badge, so a settled call can't show a live-looking
+  // price next to a 0%.
+  const isClosedCall = isFund && String((fundCall as any)?.status ?? "").toLowerCase() === "closed";
+  const closedPrice = Number((fundCall as any)?.closedPrice) || 0;
+  const entryPrice = Number((fundCall as any)?.entryPrice) || 0;
+  const callPrice = Number(isFund ? fundCall?.currentPrice : techCall?.currentPrice) || 0;
+  const currentPrice = isClosedCall
+    ? (closedPrice > 0 ? closedPrice : callPrice)
+    : (Number(live?.lastPrice) > 0 ? Number(live!.lastPrice) : callPrice);
+  const hasPrice = currentPrice > 0;
+  const targetPrice = Number(isFund ? fundCall?.targetPrice : techCall?.targetPrice) || 0;
+  const hasTarget = targetPrice > 0;
   // Currency follows the market: Saudi/Tadawul tickers are 4-digit numerics → SAR.
   const ccy = (profile as any)?.currency ?? (/^\d{3,4}$/.test(ticker ?? "") ? "SAR" : "EGP");
+  const dash = isAr ? "غير متاح" : "—";
+
+  // Remaining upside to target — only meaningful for an OPEN call with a real price.
+  const remaining: number | null = isFund
+    ? (isClosedCall || !hasPrice || !hasTarget ? null : +(((targetPrice - currentPrice) / currentPrice) * 100).toFixed(2))
+    : (techCall && Number.isFinite(techCall.return as any) ? Number(techCall.return) : null);
+
+  // Performance — CLOSED: realized return; OPEN: unrealized vs entry. Null (→ "—")
+  // whenever there is no valid price, so an un-priced call never shows a fake 0.00%.
+  const performance: number | null = !isFund
+    ? null
+    : !hasPrice
+    ? null
+    : isClosedCall
+    ? (Number.isFinite((fundCall as any).realizedReturn) ? Number((fundCall as any).realizedReturn)
+       : Number.isFinite(fundCall.performance) ? Number(fundCall.performance) : null)
+    : (entryPrice > 0 ? +(((currentPrice - entryPrice) / entryPrice) * 100).toFixed(2)
+       : Number.isFinite(fundCall.performance) ? Number(fundCall.performance) : null);
+
+  // Signature ConvictionMark value = the call's REAL upside (fundamental) or
+  // return (technical) — `remaining` already resolves to each. Null when there's
+  // no call OR no computable metric → the mark is hidden (never a fabricated 0%
+  // ring for an un-priced call).
+  const convictionValue: number | null = remaining;
   // Real daily closes from the Mubasher feed (price_bars 1d). We NEVER synthesize a
   // chart: with no real bars the sparkline + change row are hidden entirely (no fake data).
   const [realCloses, setRealCloses] = useState<number[]>([]);
@@ -122,8 +156,13 @@ export default function StockDetail() {
     const t = (ticker ?? "").toUpperCase();
     if (!t || !supabasePublic) { setRealCloses([]); return; }
     let cancel = false;
-    (supabasePublic.from("price_bars").select("closeP").eq("ticker", t).eq("interval", "1d").order("ts", { ascending: true }).limit(120) as any)
-      .then(({ data }: any) => { if (!cancel) setRealCloses((data ?? []).map((r: any) => Number(r.closeP)).filter((n: number) => Number.isFinite(n))); }, () => {});
+    // Fixed 2026-07-05 (mirror of web hooks/useStockBars): `price_bars` grows
+    // unbounded (one row per ticker per trading day), so `ORDER BY ts ASC LIMIT n`
+    // returned bars from ~1.5 years ago — the sparkline's "current"/last close was
+    // stale on every stock. Order DESC (newest first), take the window, then reverse
+    // back to oldest→newest for plotting. Drop non-positive closes (n > 0).
+    (supabasePublic.from("price_bars").select("closeP").eq("ticker", t).eq("interval", "1d").order("ts", { ascending: false }).limit(120) as any)
+      .then(({ data }: any) => { if (!cancel) setRealCloses((data ?? []).map((r: any) => Number(r.closeP)).filter((n: number) => Number.isFinite(n) && n > 0).reverse()); }, () => {});
     return () => { cancel = true; };
   }, [ticker]);
   const hasHistory = realCloses.length > 3;
@@ -134,10 +173,13 @@ export default function StockDetail() {
   const articles = ARTICLES.filter(a => a.ticker === ticker);
   const upColor = C.primary;
   const dnColor = C.accent.red;
-  const liveChange = typeof live?.changePct === "number" ? live.changePct : null;
+  // A CLOSED call is a frozen record — never show a LIVE/delayed day-change badge
+  // next to its settled exit price (mirror of web: dayChangePct suppressed when
+  // isClosedCall). Also require a real price before deriving/showing any change.
+  const liveChange = (!isClosedCall && hasPrice && typeof live?.changePct === "number") ? live.changePct : null;
   // Change % is shown ONLY from real data (live snapshot, else derived from real
   // bars). Never synthesized — if neither exists, the change row is omitted.
-  const histChange = hasHistory && history[0]
+  const histChange = (!isClosedCall && hasPrice && hasHistory && history[0])
     ? +(((history[history.length - 1] - history[0]) / history[0]) * 100).toFixed(2)
     : null;
   const change = liveChange ?? histChange;
@@ -191,9 +233,9 @@ export default function StockDetail() {
           </View>
           <View style={[styles.priceRow, isRTL && { flexDirection: "row-reverse" }]}>
             <View>
-              <Text style={[styles.companyName, { color: C.text.muted }, isRTL && { textAlign: "right" }]}>{hasPrice ? (isAr ? "السعر الحالي" : "Current Price") : (isAr ? "السعر" : "Price")}</Text>
+              <Text style={[styles.companyName, { color: C.text.muted }, isRTL && { textAlign: "right" }]}>{isClosedCall ? (isAr ? "سعر الإغلاق" : "Exit Price") : hasPrice ? (isAr ? "السعر الحالي" : "Current Price") : (isAr ? "السعر" : "Price")}</Text>
               <Text style={[styles.priceMain, { color: C.text.primary, fontFamily: displayFontFor(isAr, "800") }, isRTL && { textAlign: "right" }]}>
-                {hasPrice ? `${currentPrice.toFixed(2)}` : "—"}
+                {hasPrice ? `${currentPrice.toFixed(2)}` : dash}
               </Text>
               {hasChange ? (
                 <View style={[styles.changeRow, isRTL && { flexDirection: "row-reverse" }]}>
@@ -332,14 +374,28 @@ export default function StockDetail() {
               <Text style={[styles.sectionTitle, { color: C.text.primary }]}>{isAr ? "التوصية الأساسية" : "Fundamental Call"}</Text>
             </View>
             <View style={styles.sectionBody}>
+              {/* Data-integrity hardened (mirror of web): a missing price renders as
+                  "—"/"غير متاح" (never "EGP 0.00"), a closed call shows its frozen
+                  exit price, and Remaining/Performance are null (→ "—") whenever
+                  there is no real price — never a fabricated 0.0%. */}
               <View style={[styles.targetRow, isRTL && { flexDirection: "row-reverse" }]}>
-                <TargetBox label={isAr ? "الحالي" : "Current"} value={`${ccy} ${fundCall.currentPrice.toFixed(2)}`} color={C.text.primary} bg={C.bg.elevated} C={C} />
+                <TargetBox label={isClosedCall ? (isAr ? "الإغلاق" : "Exit") : (isAr ? "الحالي" : "Current")} value={hasPrice ? `${ccy} ${currentPrice.toFixed(2)}` : dash} color={C.text.primary} bg={C.bg.elevated} C={C} />
                 <Ionicons name={isRTL ? "arrow-back" : "arrow-forward"} size={16} color={C.primary} />
-                <TargetBox label={isAr ? "الهدف" : "Target"} value={`${ccy} ${fundCall.targetPrice.toFixed(2)}`} color={C.primary} bg={`${C.primary}15`} C={C} highlight />
+                <TargetBox label={isAr ? "الهدف" : "Target"} value={hasTarget ? `${ccy} ${targetPrice.toFixed(2)}` : dash} color={C.primary} bg={`${C.primary}15`} C={C} highlight />
               </View>
               <View style={styles.metricsGrid}>
-                <MetricItem label={isAr ? "الصعود المتبقي" : "Remaining Upside"} value={`+${fundCall.remaining.toFixed(1)}%`} color={upColor} C={C} isRTL={isRTL} />
-                <MetricItem label={isAr ? "أداؤنا" : "Our Performance"} value={`${fundCall.performance > 0 ? "+" : ""}${fundCall.performance.toFixed(1)}%`} color={fundCall.performance >= 0 ? upColor : dnColor} C={C} isRTL={isRTL} />
+                <MetricItem
+                  label={isClosedCall ? (isAr ? "الحالة" : "Status") : (isAr ? "الصعود المتبقي" : "Remaining Upside")}
+                  value={isClosedCall ? (isAr ? "مغلقة" : "Closed") : remaining == null ? dash : `${remaining > 0 ? "+" : ""}${remaining.toFixed(1)}%`}
+                  color={isClosedCall ? C.text.secondary : remaining == null ? C.text.muted : remaining >= 0 ? upColor : dnColor}
+                  C={C} isRTL={isRTL}
+                />
+                <MetricItem
+                  label={isClosedCall ? (isAr ? "العائد المحقق" : "Realized") : (isAr ? "أداؤنا" : "Our Performance")}
+                  value={performance == null ? dash : `${performance > 0 ? "+" : ""}${performance.toFixed(1)}%`}
+                  color={performance == null ? C.text.muted : performance >= 0 ? upColor : dnColor}
+                  C={C} isRTL={isRTL}
+                />
                 <MetricItem label={isAr ? "المحلل" : "Analyst"} value={fundCall.analyst} color={C.text.secondary} C={C} isRTL={isRTL} />
                 <MetricItem label={isAr ? "تاريخ الإصدار" : "Initiated"} value={fundCall.initiatedDate} color={C.text.secondary} C={C} isRTL={isRTL} />
               </View>

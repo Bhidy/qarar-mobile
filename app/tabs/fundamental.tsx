@@ -343,9 +343,24 @@ function CallCard({
   // For a closed call show the REALIZED return ("محقق"), not the frozen upside
   // labelled "Remaining" — the latter implies live actionable upside on an exited position.
   const realized = closed ? (getRealizedReturn(call as any) ?? call.performance ?? 0) : null;
-  const headlineValue = closed ? (realized as number) : call.remaining;
-  const remColor = headlineValue >= 0 ? C.primary : C.accent.red;
-  const perfColor = call.performance >= 0 ? C.primary : C.accent.red;
+  // Data-integrity hardened (mirror of stock detail): a MISSING price (≤0/null/NaN)
+  // must never render as "EGP 0.00" or feed a fabricated 0.00% into the metrics.
+  // Treat any non-positive currentPrice as "no price" → localized dash. A CLOSED
+  // call keeps its realized return (computed above), which stands on its own.
+  const hasPrice = typeof call.currentPrice === "number" && call.currentPrice > 0;
+  const hasTarget = typeof call.targetPrice === "number" && call.targetPrice > 0;
+  const dash = isAr ? "غير متاح" : "—";
+  // Headline: realized for closed; for an OPEN call only show the stored upside when
+  // there's a real price to back it (else dash — never a fake +0.0%).
+  const headlineValue: number | null = closed
+    ? (realized as number)
+    : (hasPrice ? call.remaining : null);
+  const remColor = (headlineValue ?? 0) >= 0 ? C.primary : C.accent.red;
+  // Performance is only meaningful for an OPEN call with a real price (mirror web).
+  const perfValue: number | null = closed
+    ? (realized as number)
+    : (hasPrice ? call.performance : null);
+  const perfColor = (perfValue ?? 0) >= 0 ? C.primary : C.accent.red;
 
   // Thesis: pick Arabic if available and Arabic selected
   const thesisText = isAr && "thesisAr" in call ? call.thesisAr : call.thesis;
@@ -402,8 +417,8 @@ function CallCard({
           <Text style={[styles.callReturnLabel, { color: C.text.muted, fontFamily: fontFamily("600") }]}>
             {closed ? (isAr ? "محقق" : "Realized") : (isAr ? "المتبقي" : "Remaining")}
           </Text>
-          <Text style={[styles.callReturnValue, { color: remColor }]}>
-            {headlineValue > 0 ? "+" : ""}{headlineValue.toFixed(2)}%
+          <Text style={[styles.callReturnValue, { color: headlineValue == null ? C.text.muted : remColor }]}>
+            {headlineValue == null ? dash : `${headlineValue > 0 ? "+" : ""}${headlineValue.toFixed(2)}%`}
           </Text>
         </View>
         <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={C.text.muted} />
@@ -418,7 +433,7 @@ function CallCard({
                 {isAr ? "الحالي" : "Current"}
               </Text>
               <Text style={[styles.priceValue, { color: C.text.primary }, isRTL && styles.textRight]}>
-                {currency} {call.currentPrice.toFixed(2)}
+                {hasPrice ? `${currency} ${call.currentPrice.toFixed(2)}` : dash}
               </Text>
             </View>
             <Ionicons name={isAr ? "arrow-back" : "arrow-forward"} size={16} color={C.primary} />
@@ -427,7 +442,7 @@ function CallCard({
                 {isAr ? "الهدف" : "Target"}
               </Text>
               <Text style={[styles.priceValue, { color: C.primary }, isRTL && styles.textRight]}>
-                {currency} {call.targetPrice.toFixed(2)}
+                {hasTarget ? `${currency} ${call.targetPrice.toFixed(2)}` : dash}
               </Text>
             </View>
           </View>
@@ -438,8 +453,8 @@ function CallCard({
               <Text style={[styles.expandedLabel, { color: C.text.muted, fontFamily: fontFamily("600") }]}>
                 {isAr ? "عائدنا" : "Our Return"}
               </Text>
-              <Text style={[styles.expandedValue, { color: perfColor }]}>
-                {call.performance > 0 ? "+" : ""}{call.performance.toFixed(2)}%
+              <Text style={[styles.expandedValue, { color: perfValue == null ? C.text.muted : perfColor }]}>
+                {perfValue == null ? dash : `${perfValue > 0 ? "+" : ""}${perfValue.toFixed(2)}%`}
               </Text>
             </View>
             <View style={[styles.expandedStat, { backgroundColor: C.bg.overlay }]}>

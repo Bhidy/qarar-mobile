@@ -457,7 +457,7 @@ function TechCallCard({
         <View style={[styles.priceDivider, { backgroundColor: C.border.subtle }]} />
         <PriceItem label={isAr ? "وقف الخسارة الجريء" : "Risky SL"} value={`${currency} ${call.stopLoss.toFixed(2)}`} color={dnColor} C={C} fontFamily={fontFamily} />
         <View style={[styles.priceDivider, { backgroundColor: C.border.subtle }]} />
-        <PriceItem label={isAr ? "الحالي" : "Current"} value={`${currency} ${call.currentPrice.toFixed(2)}`} color={C.text.secondary} C={C} fontFamily={fontFamily} />
+        <PriceItem label={isAr ? "الحالي" : "Current"} value={(typeof call.currentPrice === "number" && call.currentPrice > 0) ? `${currency} ${call.currentPrice.toFixed(2)}` : (isAr ? "غير متاح" : "—")} color={C.text.secondary} C={C} fontFamily={fontFamily} />
       </View>
 
       {/* Progress to target */}
