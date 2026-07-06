@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { RichText, looksLikeHtml } from "@/lib/rich-text";
 import { SignalBadge } from "@/components/shared/SignalBadge";
 import { visibleCallUpdates } from "@/lib/call-updates";
+import { formatDate } from "@/lib/format-date";
 import { Spacing, Radius } from "@/constants/theme";
 import type { CallUpdate } from "@/constants/data";
 
@@ -18,7 +19,7 @@ export function UpdatedBadge({ date, isAr, C, fontFamily }: {
     <View style={[badgeStyles.pill, { backgroundColor: `${C.primary}1A`, borderColor: `${C.primary}40` }]}>
       <Ionicons name="time-outline" size={9} color={C.primary} />
       <Text style={[badgeStyles.text, { color: C.primary, fontFamily: fontFamily("700") }]}>
-        {isAr ? "محدّث" : "UPDATED"} {date}
+        {isAr ? "محدّث" : "UPDATED"} {formatDate(date)}
       </Text>
     </View>
   );
@@ -61,7 +62,7 @@ export function CallUpdates({ updates, isAr, isRTL, C, fontFamily, defaultOpen }
           {list.map((u, i) => {
             const num = n - i; // newest first → highest number
             const itemOpen = openId === u.id;
-            const date = isAr ? (u.dateAr || u.date) : u.date;
+            const date = formatDate(isAr ? (u.dateAr || u.date) : u.date);
             const title = isAr ? (u.titleAr || u.title) : u.title;
             const body = isAr ? (u.bodyAr || u.body) : (u.body || u.bodyAr);
             const newest = i === 0;

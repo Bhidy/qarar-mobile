@@ -3,6 +3,7 @@
  * Supports Egypt (EGX) and Saudi (Tadawul) markets + Arabic/English.
  */
 import { ScrollView, View, StyleSheet, Pressable, FlatList, RefreshControl, Image } from "react-native";
+import { formatDate } from "@/lib/format-date";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -222,7 +223,7 @@ export default function TechnicalScreen() {
                       </Text>
                       <View style={[styles.watchMeta, isRTL && styles.rowRTL]}>
                         <Text style={[styles.watchAuthor, { color: C.accent.teal, fontFamily: fontFamily("700") }]}>{item.analyst || ""}</Text>
-                        <Text style={[styles.watchDate, { color: C.text.muted }]}>{item.date}</Text>
+                        <Text style={[styles.watchDate, { color: C.text.muted }]}>{formatDate(item.date)}</Text>
                       </View>
                     </View>
                   </Pressable>
@@ -270,7 +271,7 @@ export default function TechnicalScreen() {
                     </Text>
                     <View style={[styles.watchMeta, isRTL && styles.rowRTL]}>
                       <Text style={[styles.watchAuthor, { color: C.accent.teal, fontFamily: fontFamily("700") }]}>{item.author.join(", ")}</Text>
-                      <Text style={[styles.watchDate, { color: C.text.muted }]}>{item.date}</Text>
+                      <Text style={[styles.watchDate, { color: C.text.muted }]}>{formatDate(item.date)}</Text>
                     </View>
                   </View>
                 </Pressable>
@@ -330,7 +331,7 @@ export default function TechnicalScreen() {
                       </Text>
                       <View style={[styles.watchMeta, isRTL && styles.rowRTL]}>
                         <Text style={[styles.watchAuthor, { color: C.accent.teal, fontFamily: fontFamily("700") }]}>{item.ticker}</Text>
-                        <Text style={[styles.watchDate, { color: C.text.muted }]}>{item.date}</Text>
+                        <Text style={[styles.watchDate, { color: C.text.muted }]}>{formatDate(item.date)}</Text>
                       </View>
                     </View>
                   </Pressable>
@@ -408,7 +409,7 @@ function TechCallCard({
           <Text style={[styles.callCompany, { color: C.text.secondary, fontFamily: fontFamily("400") }, isRTL && styles.textRight]} numberOfLines={1}>{call.company}</Text>
           <View style={[styles.callMeta, isRTL && styles.rowRTL]}>
             <Ionicons name="person-outline" size={10} color={C.text.muted} />
-            <Text style={[styles.callMetaText, { color: C.text.muted, fontFamily: fontFamily("400") }]}>{call.analyst} · {call.date}</Text>
+            <Text style={[styles.callMetaText, { color: C.text.muted, fontFamily: fontFamily("400") }]}>{call.analyst} · {formatDate(call.date)}</Text>
             {lastUpdated && updates.length > 0 ? (
               <UpdatedBadge date={lastUpdated} isAr={isAr} C={C} fontFamily={fontFamily} />
             ) : null}

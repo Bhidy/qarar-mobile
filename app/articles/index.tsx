@@ -1,4 +1,5 @@
 import { ScrollView, View, StyleSheet, Pressable } from "react-native";
+import { formatDate } from "@/lib/format-date";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -101,7 +102,7 @@ export default function AllReleasesScreen() {
                     <Text style={[styles.metaText, { color: C.text.muted, fontFamily: ff("600") }]} numberOfLines={1}>
                       {Array.isArray(card.author) ? card.author.join(", ") : card.author}
                     </Text>
-                    <Text style={[styles.metaText, { color: C.text.muted, fontFamily: ff("400") }]}>{card.date}</Text>
+                    <Text style={[styles.metaText, { color: C.text.muted, fontFamily: ff("400") }]}>{formatDate(card.date)}</Text>
                   </View>
                 </View>
               </Pressable>

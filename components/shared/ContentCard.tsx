@@ -1,4 +1,5 @@
 import { View, StyleSheet, Pressable, Animated, Image } from "react-native";
+import { formatDate } from "@/lib/format-date";
 import { Text } from "@/components/shared/AppText";
 import { useRef } from "react";
 import { router } from "expo-router";
@@ -115,7 +116,7 @@ export function ContentCard({ card, compact = false }: ContentCardProps) {
           )}
           <View style={[styles.meta, isRTL && styles.metaRTL]}>
             <Text style={[styles.author, { color: C.text.muted }]}>{card.author.join(", ")}</Text>
-            <Text style={[styles.date, { color: C.text.muted }]}>{card.date}</Text>
+            <Text style={[styles.date, { color: C.text.muted }]}>{formatDate(card.date)}</Text>
           </View>
         </View>
       </Pressable>

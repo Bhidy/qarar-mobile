@@ -1,4 +1,5 @@
 import { ScrollView, View, StyleSheet, FlatList, Pressable, Modal, TouchableOpacity, TouchableWithoutFeedback, RefreshControl, Image } from "react-native";
+import { formatDate } from "@/lib/format-date";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -263,7 +264,7 @@ export default function HomeScreen() {
                   <Text style={[styles.newsTitle, { color: C.text.secondary, fontFamily: fontFamily("400") }, isRTL && styles.textRight]} numberOfLines={2}>
                     {(isAr && (item as any).titleAr) ? (item as any).titleAr : item.title}
                   </Text>
-                  <Text style={[styles.newsDate, { color: C.text.muted, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}>{item.date}</Text>
+                  <Text style={[styles.newsDate, { color: C.text.muted, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}>{formatDate(item.date)}</Text>
                 </Pressable>
               ))}
             </View>

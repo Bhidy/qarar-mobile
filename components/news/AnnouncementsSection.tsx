@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { formatDate } from "@/lib/format-date";
 import { View, StyleSheet, Pressable, FlatList, TextInput, Modal, ActivityIndicator, ScrollView } from "react-native";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -171,7 +172,7 @@ export function AnnouncementsSection() {
                       ) : null}
                       {a.date ? (
                         <Text style={[s.dateText, { color: C.text.muted, fontFamily: ff("400") }]}>
-                          {a.date}
+                          {formatDate(a.date)}
                         </Text>
                       ) : null}
                     </View>
@@ -216,7 +217,7 @@ export function AnnouncementsSection() {
               ) : null}
               {active?.date ? (
                 <Text style={[s.dateText, { color: C.text.muted, fontFamily: ff("400") }]}>
-                  {active.date}
+                  {formatDate(active.date)}
                 </Text>
               ) : null}
             </View>

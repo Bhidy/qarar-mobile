@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatDate } from "@/lib/format-date";
 import { ScrollView, View, StyleSheet, Pressable, Image, Modal } from "react-native";
 import { WebView } from "react-native-webview";
 import { Text } from "@/components/shared/AppText";
@@ -148,7 +149,7 @@ export default function ArticleDetail() {
                 <Text style={[styles.authorRole, { color: C.text.muted }]}>{article.authorRole}</Text>
               ) : null}
             </View>
-            <Text style={[styles.articleDate, { color: C.text.muted }]}>{article.date}</Text>
+            <Text style={[styles.articleDate, { color: C.text.muted }]}>{formatDate(article.date)}</Text>
           </View>
         </View>
 
@@ -271,7 +272,7 @@ export default function ArticleDetail() {
                         {rTitle}
                       </Text>
                       <Text style={[styles.relatedMeta, { color: C.text.muted, fontFamily: ff("400") }, isRTL && { textAlign: "right", writingDirection: "rtl" }]}>
-                        {authorStr} · {r.date}
+                        {authorStr} · {formatDate(r.date)}
                       </Text>
                     </View>
                     <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={14} color={C.text.muted} />

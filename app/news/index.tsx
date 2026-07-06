@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { formatDate } from "@/lib/format-date";
 import { View, StyleSheet, Pressable, FlatList } from "react-native";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -134,7 +135,7 @@ export default function AllNewsScreen() {
                   </Text>
                   {!!item.date && (
                     <Text style={[s.date, { color: C.text.muted, fontFamily: ff("400") }, isRTL && s.textRight]}>
-                      {item.date}
+                      {formatDate(item.date)}
                     </Text>
                   )}
                 </View>

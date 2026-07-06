@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatDate } from "@/lib/format-date";
 import { ScrollView, View, StyleSheet, Pressable, Image, Linking, Modal } from "react-native";
 import { WebView } from "react-native-webview";
 import Svg, { Path, Defs, LinearGradient as SvgLinear, Stop, Circle, Line as SvgLine } from "react-native-svg";
@@ -397,7 +398,7 @@ export default function StockDetail() {
                   C={C} isRTL={isRTL}
                 />
                 <MetricItem label={isAr ? "المحلل" : "Analyst"} value={fundCall.analyst} color={C.text.secondary} C={C} isRTL={isRTL} />
-                <MetricItem label={isAr ? "تاريخ الإصدار" : "Initiated"} value={fundCall.initiatedDate} color={C.text.secondary} C={C} isRTL={isRTL} />
+                <MetricItem label={isAr ? "تاريخ الإصدار" : "Initiated"} value={formatDate(fundCall.initiatedDate)} color={C.text.secondary} C={C} isRTL={isRTL} />
               </View>
               <RichBody
                 html={(isAr && (fundCall as any).thesisAr) ? (fundCall as any).thesisAr : (fundCall.thesis ?? "")}
@@ -479,7 +480,7 @@ export default function StockDetail() {
                 <MetricItem label={isAr ? "النمط" : "Pattern"} value={techCall.pattern} color={C.accent.teal} C={C} isRTL={isRTL} />
                 <MetricItem label={isAr ? "الإطار الزمني" : "Timeframe"} value={techCall.timeframe} color={C.text.secondary} C={C} isRTL={isRTL} />
                 <MetricItem label={isAr ? "المحلل" : "Analyst"} value={techCall.analyst} color={C.text.secondary} C={C} isRTL={isRTL} />
-                <MetricItem label={isAr ? "التاريخ" : "Date"} value={techCall.date} color={C.text.secondary} C={C} isRTL={isRTL} />
+                <MetricItem label={isAr ? "التاريخ" : "Date"} value={formatDate(techCall.date)} color={C.text.secondary} C={C} isRTL={isRTL} />
                 {(techCall as any).movingAverages ? (
                   <MetricItem label={isAr ? "المتوسطات" : "Moving Avg"} value={(techCall as any).movingAverages} color={C.text.secondary} C={C} isRTL={isRTL} />
                 ) : null}
@@ -525,7 +526,7 @@ export default function StockDetail() {
                   </View>
                   <View style={styles.articleInfo}>
                     <Text style={[styles.articleTitle, { color: C.text.primary, fontFamily: ff("600") }, isRTL && { textAlign: "right", writingDirection: "rtl" }]} numberOfLines={2}>{aTitle}</Text>
-                    <Text style={[styles.articleMeta, { color: C.text.muted, fontFamily: ff("400") }, isRTL && { textAlign: "right", writingDirection: "rtl" }]}>{authorStr} · {a.date}</Text>
+                    <Text style={[styles.articleMeta, { color: C.text.muted, fontFamily: ff("400") }, isRTL && { textAlign: "right", writingDirection: "rtl" }]}>{authorStr} · {formatDate(a.date)}</Text>
                   </View>
                   <Ionicons name={isRTL ? "chevron-back" : "chevron-forward"} size={14} color={C.text.muted} />
                 </Pressable>

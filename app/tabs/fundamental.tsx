@@ -1,4 +1,5 @@
 import { ScrollView, View, StyleSheet, Pressable, FlatList, RefreshControl } from "react-native";
+import { formatDate } from "@/lib/format-date";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -186,7 +187,7 @@ export default function FundamentalScreen() {
                     </Text>
                     <View style={[styles.articleMeta, isRTL && styles.rowRTL]}>
                       <Text style={[styles.articleAuthor, { color: C.text.muted, fontFamily: fontFamily("600") }]}>{item.author.join(", ")}</Text>
-                      <Text style={[styles.articleDate, { color: C.text.muted }]}>{item.date}</Text>
+                      <Text style={[styles.articleDate, { color: C.text.muted }]}>{formatDate(item.date)}</Text>
                     </View>
                   </View>
                 </Pressable>
@@ -420,7 +421,7 @@ function CallCard({
             <Ionicons name="person-outline" size={10} color={C.text.muted} />
             <Text style={[styles.callMetaText, { color: C.text.muted, fontFamily: fontFamily("400") }]}>{call.analyst}</Text>
             <Text style={[styles.callMetaDot, { color: C.text.muted }]}>·</Text>
-            <Text style={[styles.callMetaText, { color: C.text.muted }]}>{call.initiatedDate}</Text>
+            <Text style={[styles.callMetaText, { color: C.text.muted }]}>{formatDate(call.initiatedDate)}</Text>
             {lastUpdated && updates.length > 0 ? (
               <UpdatedBadge date={lastUpdated} isAr={isAr} C={C} fontFamily={fontFamily} />
             ) : null}

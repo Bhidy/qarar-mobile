@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { formatDate } from "@/lib/format-date";
 import { ScrollView, View, StyleSheet, Pressable, Image, Linking } from "react-native";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -76,7 +77,7 @@ export default function NewsDetailScreen() {
               {title}
             </Text>
             <View style={[styles.metaRow, isRTL && styles.rowRTL]}>
-              {!!item.date && <Text style={[styles.meta, { color: C.text.muted, fontFamily: ff("400") }]}>{item.date}</Text>}
+              {!!item.date && <Text style={[styles.meta, { color: C.text.muted, fontFamily: ff("400") }]}>{formatDate(item.date)}</Text>}
               {!!item.source && <Text style={[styles.meta, { color: C.text.muted, fontFamily: ff("400") }]}>· {item.source}</Text>}
             </View>
 

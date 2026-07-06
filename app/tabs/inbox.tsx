@@ -1,4 +1,5 @@
 import { ScrollView, View, StyleSheet, Pressable } from "react-native";
+import { formatDate } from "@/lib/format-date";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -118,7 +119,7 @@ function NotifItem({ item, C, isRTL, isAr, fontFamily, onRead }: {
           </View>
           <View style={[styles.notifTime, isRTL && styles.alignStart]}>
             {item.time && <Text style={[styles.notifTimeText, { color: C.text.secondary }]}>{item.time}</Text>}
-            <Text style={[styles.notifDateText, { color: C.text.muted }]}>{item.date}</Text>
+            <Text style={[styles.notifDateText, { color: C.text.muted }]}>{formatDate(item.date)}</Text>
           </View>
         </View>
 

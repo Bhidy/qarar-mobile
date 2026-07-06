@@ -69,7 +69,7 @@ function relDate(iso: string, isAr: boolean) {
   if (diff === 1) return isAr ? "أمس"   : "Yesterday";
   if (diff < 7)   return isAr ? `قبل ${diff} أيام` : `${diff}d ago`;
   if (diff < 30)  return isAr ? `قبل ${Math.floor(diff / 7)} أسابيع` : `${Math.floor(diff / 7)}w ago`;
-  return d.toLocaleDateString(isAr ? "ar-EG" : "en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-GB"); // DD/MM/YYYY
 }
 
 export default function PodcastScreen() {

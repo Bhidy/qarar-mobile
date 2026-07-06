@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { formatDate } from "@/lib/format-date";
 import { ScrollView, View, StyleSheet, Pressable, Image, Modal } from "react-native";
 import { WebView } from "react-native-webview";
 import { Text } from "@/components/shared/AppText";
@@ -115,7 +116,7 @@ export default function IndexUpdateScreen() {
               </Text>
             </View>
             <View style={[styles.metaRow, isRTL && styles.rowRTL]}>
-              {!!item.date && <Text style={[styles.meta, { color: C.text.muted, fontFamily: ff("400") }]}>{item.date}</Text>}
+              {!!item.date && <Text style={[styles.meta, { color: C.text.muted, fontFamily: ff("400") }]}>{formatDate(item.date)}</Text>}
               {!!item.analyst && <Text style={[styles.meta, { color: C.text.muted, fontFamily: ff("400") }]}>· {item.analyst}</Text>}
               {typeof item.currentPrice === "number" && item.currentPrice > 0 && (
                 <Text style={[styles.meta, { color: C.text.secondary, fontFamily: ff("700") }]}>
