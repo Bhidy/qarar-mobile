@@ -163,7 +163,11 @@ export default function StockDetail() {
     // returned bars from ~1.5 years ago — the sparkline's "current"/last close was
     // stale on every stock. Order DESC (newest first), take the window, then reverse
     // back to oldest→newest for plotting. Drop non-positive closes (n > 0).
-    (supabasePublic.from("price_bars").select("closeP").eq("ticker", t).eq("interval", "1d").order("ts", { ascending: false }).limit(120) as any)
+    // Per-symbol closes via the `stock_closes` security-definer RPC — the 2026-07-06
+    // hardening (H-004) locked anon `price_bars` to the public index series, so a direct
+    // per-symbol select now returns 0 rows (silent). The RPC returns a bounded per-symbol
+    // window (newest→oldest) while keeping the licensed table un-dumpable.
+    (supabasePublic.rpc("stock_closes", { p_ticker: t, p_interval: "1d", p_limit: 120 }) as any)
       .then(({ data }: any) => { if (!cancel) setRealCloses((data ?? []).map((r: any) => Number(r.closeP)).filter((n: number) => Number.isFinite(n) && n > 0).reverse()); }, () => {});
     return () => { cancel = true; };
   }, [ticker]);
