@@ -97,6 +97,7 @@ export default function StockDetail() {
   const tvStudies = techCall ? parseTvStudies((techCall as any).chartStudies) : [];
   // Real aspect ratio of the captured chart so it renders FULL (never cropped).
   const [chartAspect, setChartAspect] = useState(1.6);
+  const [showChartZoom, setShowChartZoom] = useState(false);
   useEffect(() => {
     const uri = (techCall as any)?.chartImage;
     if (!uri) return;
@@ -338,8 +339,10 @@ export default function StockDetail() {
                     ) : null}
                   </View>
                   {/* contain (never cover): the captured chart renders FULL — never cropped —
-                      even before Image.getSize resolves the true aspect ratio. */}
-                  <Image source={{ uri: (techCall as any).chartImage }} style={{ width: "100%", aspectRatio: chartAspect, backgroundColor: C.bg.base }} resizeMode="contain" />
+                      even before Image.getSize resolves the true aspect ratio. Tap to zoom. */}
+                  <Pressable onPress={() => { Haptics.selectionAsync(); setShowChartZoom(true); }} accessibilityRole="imagebutton" accessibilityLabel={isAr ? "تكبير الرسم" : "Zoom chart"}>
+                    <Image source={{ uri: (techCall as any).chartImage }} style={{ width: "100%", aspectRatio: chartAspect, backgroundColor: C.bg.base }} resizeMode="contain" />
+                  </Pressable>
                 </View>
               ) : null}
 
@@ -595,6 +598,30 @@ export default function StockDetail() {
             ) : null}
           </SafeAreaView>
         </SafeAreaProvider>
+      </Modal>
+
+      {/* Analyst chart — full-screen zoom (tap the captured chart to review it in detail). */}
+      <Modal
+        visible={showChartZoom}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowChartZoom(false)}
+        supportedOrientations={["portrait", "landscape-left", "landscape-right"]}
+      >
+        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.9)", alignItems: "center", justifyContent: "center", padding: Spacing[3] }} onPress={() => setShowChartZoom(false)}>
+          {(techCall as any)?.chartImage ? (
+            <Image source={{ uri: (techCall as any).chartImage }} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
+          ) : null}
+          <Pressable
+            onPress={() => { Haptics.selectionAsync(); setShowChartZoom(false); }}
+            hitSlop={12}
+            style={{ position: "absolute", top: Spacing[6], right: Spacing[5], width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.14)", alignItems: "center", justifyContent: "center" }}
+            accessibilityRole="button"
+            accessibilityLabel={isAr ? "إغلاق" : "Close"}
+          >
+            <Ionicons name="close" size={22} color="#fff" />
+          </Pressable>
+        </Pressable>
       </Modal>
     </SafeAreaView>
   );
