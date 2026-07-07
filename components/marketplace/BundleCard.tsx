@@ -48,8 +48,8 @@ export function BundleCard({
 
       {/* Identity */}
       <View style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "center", gap: 10 }}>
-        <View style={{ width: 40, height: 40, borderRadius: Radius.md, backgroundColor: acc.main, alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name={bundle.icon} size={20} color="#fff" />
+        <View style={{ width: 56, height: 56, borderRadius: Radius.lg, backgroundColor: acc.main, alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name={bundle.icon} size={28} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: C.text.primary, fontSize: 17, fontFamily: ff("800"), textAlign: rtl ? "right" : "left" }}>{name}</Text>

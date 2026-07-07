@@ -73,7 +73,7 @@ export function PlanPill({ planId, small }: { planId: BundleId | null | undefine
   const acc = bundleAccent(C, bundle.accent);
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: acc.soft, borderRadius: Radius.full, paddingHorizontal: small ? 8 : 10, paddingVertical: small ? 3 : 4 }}>
-      <Ionicons name={isUnlimited(bundle) ? "ribbon" : "sparkles"} size={small ? 11 : 12} color={acc.ink} />
+      <Ionicons name={bundle.icon} size={small ? 11 : 12} color={acc.ink} />
       <Text style={{ color: acc.ink, fontWeight: "800", fontSize: small ? 11 : 12, fontFamily: fontFamilyFor(isAr, "800") }}>
         {isAr ? bundle.nameAr : bundle.nameEn}
       </Text>

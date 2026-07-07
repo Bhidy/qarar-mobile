@@ -44,13 +44,13 @@ export const BUNDLES: Bundle[] = [
     id: "starter",
     nameEn: "Starter", nameAr: "الأساسية",
     taglineEn: "For the focused investor", taglineAr: "للمستثمر المُركّز",
-    priceUSD: 29, slots: 3, accent: "teal", icon: "sparkles-outline",
+    priceUSD: 29, slots: 3, accent: "teal", icon: "diamond-outline",
   },
   {
     id: "pro",
     nameEn: "Pro", nameAr: "الاحترافية",
     taglineEn: "For the active trader", taglineAr: "للمتداول النشط",
-    priceUSD: 59, slots: 6, highlighted: true, accent: "gold", icon: "sparkles-outline",
+    priceUSD: 59, slots: 6, highlighted: true, accent: "gold", icon: "speedometer-outline",
   },
   {
     id: "elite",
