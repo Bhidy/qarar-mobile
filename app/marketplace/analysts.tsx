@@ -14,6 +14,7 @@ import { fontFamilyFor } from "@/lib/typography";
 import { useMarketplace } from "@/context/MarketplaceContext";
 import { getAllAnalysts } from "@/lib/marketplace/data";
 import { formatUSD, formatCompact, marketExchange, coverageLabel, analystName, analystRole, avatarColor } from "@/lib/marketplace/format";
+import { annualFrom } from "@/lib/marketplace/billing";
 import type { AnalystProfile } from "@/lib/marketplace/types";
 import { MarketHeader, PlanPill, SlotMeter, MButton, AnalystAvatar } from "@/components/marketplace/ui";
 
@@ -82,7 +83,11 @@ export default function AnalystsScreen() {
                 {mp.selUnlimited ? `${mp.selCount}` : `${mp.selCount}/${mp.selSlotLimit}`}
               </Text>
             </View>
-            <Text style={{ color: C.text.primary, fontSize: 13, fontFamily: ff("800"), marginTop: 2 }}>{formatUSD(mp.selPlan.priceUSD)}<Text style={{ color: C.text.muted, fontFamily: ff("500") }}> / {isAr ? "شهر" : "mo"}</Text></Text>
+            <Text style={{ color: C.text.primary, fontSize: 13, fontFamily: ff("800"), marginTop: 2 }}>
+              {mp.selPeriod === "annual" ? formatUSD(annualFrom(mp.selPlan.priceUSD).effectiveMonthly) : formatUSD(mp.selPlan.priceUSD)}
+              <Text style={{ color: C.text.muted, fontFamily: ff("500") }}> / {isAr ? "شهر" : "mo"}</Text>
+              {mp.selPeriod === "annual" ? <Text style={{ color: C.accent.teal, fontFamily: ff("700") }}> · {isAr ? "سنوي" : "yearly"}</Text> : null}
+            </Text>
           </View>
           <MButton label={isAr ? "متابعة" : "Continue"} icon={isRTL ? "arrow-back" : "arrow-forward"} onPress={() => router.push("/marketplace/checkout")} />
         </View>

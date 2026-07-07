@@ -11,20 +11,24 @@ import { Radius, Spacing } from "@/constants/theme";
 import { fontFamilyFor } from "@/lib/typography";
 import { bundlePerks, slotLabel, isUnlimited, type Bundle, type BundleId } from "@/lib/marketplace/bundles";
 import { bundleAccent, formatUSD } from "@/lib/marketplace/format";
+import { annualFrom, ANNUAL_MONTHS_FREE, type BillingPeriod } from "@/lib/marketplace/billing";
 import { MButton, PerkRow } from "./ui";
 
 export function BundleCard({
-  bundle, activePlanId, onChoose, ctaLabel,
+  bundle, activePlanId, onChoose, ctaLabel, period = "monthly",
 }: {
   bundle: Bundle;
   activePlanId?: BundleId | null;
   onChoose: (id: BundleId) => void;
   ctaLabel?: string;
+  period?: BillingPeriod;
 }) {
   const C = useColors();
   const { language, isRTL } = useTheme();
   const isAr = language === "ar";
   const acc = bundleAccent(C, bundle.accent);
+  const isAnnual = period === "annual";
+  const annual = annualFrom(bundle.priceUSD);
   const perks = bundlePerks(bundle.id);
   const isActive = activePlanId === bundle.id;
   const name = isAr ? bundle.nameAr : bundle.nameEn;
@@ -58,9 +62,21 @@ export function BundleCard({
       </View>
 
       {/* Price */}
-      <View style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "flex-end", gap: 4, marginTop: 14 }}>
-        <Text style={{ color: C.text.primary, fontSize: 34, fontFamily: ff("800") }}>{formatUSD(bundle.priceUSD)}</Text>
-        <Text style={{ color: C.text.muted, fontSize: 13, fontFamily: ff("500"), marginBottom: 4 }}>/ {isAr ? "شهر" : "month"}</Text>
+      <View style={{ marginTop: 14 }}>
+        <View style={{ flexDirection: rtl ? "row-reverse" : "row", alignItems: "flex-end", gap: 6, flexWrap: "wrap" }}>
+          <Text style={{ color: C.text.primary, fontSize: 34, fontFamily: ff("800") }}>
+            {isAnnual ? formatUSD(annual.effectiveMonthly) : formatUSD(bundle.priceUSD)}
+          </Text>
+          <Text style={{ color: C.text.muted, fontSize: 13, fontFamily: ff("500"), marginBottom: 4 }}>/ {isAr ? "شهر" : "mo"}</Text>
+          {isAnnual ? (
+            <Text style={{ color: C.text.muted, fontSize: 15, fontFamily: ff("600"), marginBottom: 4, textDecorationLine: "line-through" }}>{formatUSD(bundle.priceUSD)}</Text>
+          ) : null}
+        </View>
+        <Text style={{ color: C.text.muted, fontSize: 12, fontFamily: ff("400"), marginTop: 4, textAlign: rtl ? "right" : "left" }}>
+          {isAnnual
+            ? (isAr ? `${formatUSD(annual.annualTotal)} سنويًا · ${ANNUAL_MONTHS_FREE} شهر مجانًا` : `${formatUSD(annual.annualTotal)} billed yearly · ${ANNUAL_MONTHS_FREE} months free`)
+            : (isAr ? "يُحصّل شهريًا · إلغاء في أي وقت" : "billed monthly · cancel anytime")}
+        </Text>
       </View>
 
       {/* Capacity headline */}

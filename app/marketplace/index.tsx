@@ -13,14 +13,14 @@ import { fontFamilyFor } from "@/lib/typography";
 import { useMarketplace } from "@/context/MarketplaceContext";
 import { BUNDLES, type BundleId } from "@/lib/marketplace/bundles";
 import { BundleCard } from "@/components/marketplace/BundleCard";
-import { MarketHeader, PlanPill, MButton } from "@/components/marketplace/ui";
+import { MarketHeader, PlanPill, MButton, BillingToggle } from "@/components/marketplace/ui";
 
 export default function PlansScreen() {
   const C = useColors();
   const { language, isRTL } = useTheme();
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
-  const { setPlan, selPlanId, isActive, subPlanId } = useMarketplace();
+  const { setPlan, selPlanId, isActive, subPlanId, selPeriod, setSelPeriod } = useMarketplace();
   const current: BundleId | null = subPlanId ?? selPlanId;
 
   const choose = (id: BundleId) => {
@@ -61,9 +61,19 @@ export default function PlansScreen() {
           </View>
         ) : null}
 
+        {/* Billing cadence toggle */}
+        <View style={{ alignItems: "center", marginBottom: Spacing[4], gap: 6 }}>
+          <BillingToggle period={selPeriod} onChange={setSelPeriod} />
+          <Text style={{ color: C.text.muted, fontSize: 12, fontFamily: ff("400") }}>
+            {selPeriod === "annual"
+              ? (isAr ? "أفضل قيمة — ادفع سنويًا واحصل على شهرين مجانًا." : "Best value — pay yearly, get 2 months free.")
+              : (isAr ? "بدّل إلى السنوي لتوفّر أكثر." : "Switch to yearly to save.")}
+          </Text>
+        </View>
+
         {/* Bundle cards */}
         {BUNDLES.map((b) => (
-          <BundleCard key={b.id} bundle={b} activePlanId={current} onChoose={choose} />
+          <BundleCard key={b.id} bundle={b} activePlanId={current} onChoose={choose} period={selPeriod} />
         ))}
 
         {/* Scope note */}

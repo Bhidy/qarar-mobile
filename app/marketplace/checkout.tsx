@@ -13,8 +13,9 @@ import { fontFamilyFor } from "@/lib/typography";
 import { useMarketplace } from "@/context/MarketplaceContext";
 import { getAnalysts } from "@/lib/marketplace/data";
 import { bundlePerks } from "@/lib/marketplace/bundles";
+import { annualFrom, chargedAmount, ANNUAL_MONTHS_FREE } from "@/lib/marketplace/billing";
 import { formatUSD, analystName, analystRole, avatarColor, bundleAccent } from "@/lib/marketplace/format";
-import { MarketHeader, PlanPill, SlotMeter, MButton, AnalystAvatar, PerkRow } from "@/components/marketplace/ui";
+import { MarketHeader, PlanPill, SlotMeter, MButton, AnalystAvatar, PerkRow, BillingToggle } from "@/components/marketplace/ui";
 
 export default function CheckoutScreen() {
   const C = useColors();
@@ -42,12 +43,16 @@ export default function CheckoutScreen() {
 
   const perks = bundlePerks(plan.id);
   const acc = bundleAccent(C, plan.accent);
+  const period = mp.selPeriod;
+  const isAnnual = period === "annual";
+  const total = chargedAmount(plan.priceUSD, period);
+  const annual = annualFrom(plan.priceUSD);
 
   const pay = () => {
     if (processing) return;
     setProcessing(true);
     setTimeout(() => {
-      mp.subscribe(plan.id, mp.selectedIds, plan.priceUSD);
+      mp.subscribe(plan.id, mp.selectedIds, plan.priceUSD, period);
       mp.clearSelection();
       router.replace("/marketplace/subscription");
     }, 900);
@@ -79,6 +84,11 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
+        {/* Cadence */}
+        <View style={{ marginTop: Spacing[4] }}>
+          <BillingToggle period={period} onChange={mp.setSelPeriod} full />
+        </View>
+
         {/* Analysts */}
         <Text style={{ color: C.text.primary, fontSize: 15, fontFamily: ff("800"), marginTop: Spacing[5], marginBottom: Spacing[3], textAlign: isRTL ? "right" : "left" }}>
           {isAr ? `${analysts.length} محللين مختارين` : `${analysts.length} analysts selected`}
@@ -99,12 +109,21 @@ export default function CheckoutScreen() {
         </View>
 
         {/* Total */}
-        <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: Spacing[5], paddingTop: Spacing[3], borderTopWidth: 1, borderTopColor: C.border.subtle }}>
-          <Text style={{ color: C.text.primary, fontSize: 14, fontFamily: ff("800") }}>{isAr ? "الإجمالي الشهري" : "Monthly total"}</Text>
-          <Text style={{ color: C.text.primary, fontSize: 24, fontFamily: ff("800") }}>{formatUSD(plan.priceUSD)}</Text>
+        {isAnnual ? (
+          <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between", marginTop: Spacing[4] }}>
+            <Text style={{ color: C.accent.teal, fontSize: 12.5, fontFamily: ff("700") }}>{isAr ? `${ANNUAL_MONTHS_FREE} شهر مجانًا` : `${ANNUAL_MONTHS_FREE} months free`}</Text>
+            <Text style={{ color: C.accent.teal, fontSize: 12.5, fontFamily: ff("700") }}>−{formatUSD(plan.priceUSD * ANNUAL_MONTHS_FREE)}</Text>
+          </View>
+        ) : null}
+        <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: Spacing[3], paddingTop: Spacing[3], borderTopWidth: 1, borderTopColor: C.border.subtle }}>
+          <View>
+            <Text style={{ color: C.text.primary, fontSize: 14, fontFamily: ff("800") }}>{isAnnual ? (isAr ? "الإجمالي/سنة" : "Total / yr") : (isAr ? "الإجمالي/شهر" : "Total / mo")}</Text>
+            {isAnnual ? <Text style={{ color: C.text.muted, fontSize: 11, fontFamily: ff("400"), marginTop: 2 }}>≈ {formatUSD(annual.effectiveMonthly)}/{isAr ? "شهر" : "mo"}</Text> : null}
+          </View>
+          <Text style={{ color: C.text.primary, fontSize: 24, fontFamily: ff("800") }}>{formatUSD(total)}</Text>
         </View>
 
-        <MButton label={processing ? (isAr ? "جارٍ التفعيل…" : "Activating…") : (isAr ? `اشترك · ${formatUSD(plan.priceUSD)}` : `Subscribe · ${formatUSD(plan.priceUSD)}`)} icon="lock-closed" onPress={pay} disabled={processing} style={{ marginTop: Spacing[4] }} />
+        <MButton label={processing ? (isAr ? "جارٍ التفعيل…" : "Activating…") : (isAr ? `اشترك · ${formatUSD(total)}` : `Subscribe · ${formatUSD(total)}`)} icon="lock-closed" onPress={pay} disabled={processing} style={{ marginTop: Spacing[4] }} />
         {processing ? <ActivityIndicator color={C.primary} style={{ marginTop: 12 }} /> : null}
         <Text style={{ color: C.text.muted, fontSize: 11, fontFamily: ff("400"), textAlign: "center", marginTop: Spacing[3] }}>
           {isAr ? "دفع آمن · محاكاة في هذا العرض" : "Secure checkout · simulated in this demo"}

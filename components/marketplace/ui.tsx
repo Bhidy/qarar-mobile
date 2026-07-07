@@ -12,6 +12,7 @@ import { Radius, Spacing, Typography } from "@/constants/theme";
 import { fontFamilyFor } from "@/lib/typography";
 import { bundleById, isUnlimited, slotCountOf, type BundleId } from "@/lib/marketplace/bundles";
 import { bundleAccent, initialsOf, type ResolvedAccent } from "@/lib/marketplace/format";
+import { ANNUAL_SAVINGS_PCT, type BillingPeriod } from "@/lib/marketplace/billing";
 import type { AnalystProfile } from "@/lib/marketplace/types";
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -127,6 +128,46 @@ export function PerkRow({ icon, label, value, accentInk }: { icon?: IconName; la
 
 export function accentFor(C: ReturnType<typeof useColors>, key: Parameters<typeof bundleAccent>[1]): ResolvedAccent {
   return bundleAccent(C, key);
+}
+
+// ── Billing cadence toggle (Monthly / Yearly · Save X%) ──────────────────────
+export function BillingToggle({
+  period, onChange, full,
+}: {
+  period: BillingPeriod;
+  onChange: (p: BillingPeriod) => void;
+  full?: boolean;
+}) {
+  const C = useColors();
+  const { language, isRTL } = useTheme();
+  const isAr = language === "ar";
+  const ff = fontFamilyFor(isAr, "800");
+
+  const Seg = ({ value, label, badge }: { value: BillingPeriod; label: string; badge?: boolean }) => {
+    const on = period === value;
+    return (
+      <Pressable
+        onPress={() => onChange(value)}
+        style={{ flex: full ? 1 : undefined, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: on ? C.primary : "transparent" }}
+      >
+        <Text style={{ color: on ? "#fff" : C.text.secondary, fontFamily: ff, fontSize: 13 }}>{label}</Text>
+        {badge ? (
+          <View style={{ paddingHorizontal: 6, paddingVertical: 1, borderRadius: Radius.full, backgroundColor: on ? "rgba(255,255,255,0.22)" : `${C.accent.teal}22` }}>
+            <Text style={{ color: on ? "#fff" : C.accent.teal, fontFamily: ff, fontSize: 9.5 }}>
+              {isAr ? `وفّر ${ANNUAL_SAVINGS_PCT}%` : `Save ${ANNUAL_SAVINGS_PCT}%`}
+            </Text>
+          </View>
+        ) : null}
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", gap: 2, padding: 3, borderRadius: Radius.full, borderWidth: 1, borderColor: C.border.subtle, backgroundColor: C.bg.elevated, alignSelf: full ? "stretch" : "center" }}>
+      <Seg value="monthly" label={isAr ? "شهري" : "Monthly"} />
+      <Seg value="annual" label={isAr ? "سنوي" : "Yearly"} badge />
+    </View>
+  );
 }
 
 // ── Stack-screen header (back arrow + title + optional right slot) ────────────

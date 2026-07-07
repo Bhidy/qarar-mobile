@@ -14,8 +14,9 @@ import { fontFamilyFor } from "@/lib/typography";
 import { useMarketplace } from "@/context/MarketplaceContext";
 import { getAnalysts } from "@/lib/marketplace/data";
 import { BUNDLES, bundlePerks, isUnlimited, type BundleId } from "@/lib/marketplace/bundles";
+import { annualFrom } from "@/lib/marketplace/billing";
 import { formatUSD, analystName, analystRole, avatarColor, bundleAccent, marketExchange, coverageLabel } from "@/lib/marketplace/format";
-import { MarketHeader, PlanPill, SlotMeter, MButton, AnalystAvatar } from "@/components/marketplace/ui";
+import { MarketHeader, PlanPill, SlotMeter, MButton, AnalystAvatar, BillingToggle } from "@/components/marketplace/ui";
 import { BundleCard } from "@/components/marketplace/BundleCard";
 
 export default function SubscriptionScreen() {
@@ -49,6 +50,9 @@ export default function SubscriptionScreen() {
   const acc = bundleAccent(C, plan.accent);
   const unlimited = isUnlimited(plan);
   const canAddMore = unlimited || mp.subSlotsLeft > 0;
+  const period = mp.subPeriod;
+  const isAnnual = period === "annual";
+  const annual = annualFrom(plan.priceUSD);
   const renew = mp.nextBilling();
   const renewStr = renew ? new Date(renew).toLocaleDateString(isAr ? "ar-EG" : "en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
@@ -77,14 +81,23 @@ export default function SubscriptionScreen() {
                 </View>
               </View>
               <Text style={{ color: C.text.muted, fontSize: 12.5, fontFamily: ff("400"), textAlign: isRTL ? "right" : "left" }}>{isAr ? plan.taglineAr : plan.taglineEn}</Text>
-              <Text style={{ color: C.text.primary, fontSize: 24, fontFamily: ff("800"), marginTop: 4 }}>{formatUSD(plan.priceUSD)}<Text style={{ color: C.text.muted, fontSize: 12, fontFamily: ff("500") }}> / {isAr ? "شهر" : "month"}</Text></Text>
+              <Text style={{ color: C.text.primary, fontSize: 24, fontFamily: ff("800"), marginTop: 4 }}>
+                {isAnnual ? formatUSD(annual.annualTotal) : formatUSD(plan.priceUSD)}
+                <Text style={{ color: C.text.muted, fontSize: 12, fontFamily: ff("500") }}> / {isAnnual ? (isAr ? "سنة" : "year") : (isAr ? "شهر" : "month")}</Text>
+              </Text>
+              {isAnnual ? (
+                <Text style={{ color: C.accent.teal, fontSize: 11.5, fontFamily: ff("700"), marginTop: 2 }}>≈ {formatUSD(annual.effectiveMonthly)}/{isAr ? "شهر" : "mo"}</Text>
+              ) : null}
             </View>
           </View>
 
           <View style={{ marginTop: 14 }}><SlotMeter planId={plan.id} used={analysts.length} /></View>
-          <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", gap: 6, marginTop: 10 }}>
-            <Ionicons name="calendar-outline" size={14} color={C.text.muted} />
-            <Text style={{ color: C.text.muted, fontSize: 12, fontFamily: ff("500") }}>{isAr ? "يتجدد" : "Renews"} <Text style={{ color: C.text.secondary, fontFamily: ff("700") }}>{renewStr}</Text></Text>
+          <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+            <BillingToggle period={period} onChange={mp.changePeriod} />
+            <View style={{ flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="calendar-outline" size={14} color={C.text.muted} />
+              <Text style={{ color: C.text.muted, fontSize: 12, fontFamily: ff("500") }}>{isAr ? "يتجدد" : "Renews"} <Text style={{ color: C.text.secondary, fontFamily: ff("700") }}>{renewStr}</Text></Text>
+            </View>
           </View>
 
           {/* Feature chips */}
@@ -107,7 +120,7 @@ export default function SubscriptionScreen() {
               {isAr ? "يسري التغيير فورًا (محاكاة). عند التقليل يُحتفظ بالمحللين الأوائل." : "Switching takes effect immediately (simulated). Downgrading keeps your earliest analysts."}
             </Text>
             {BUNDLES.map((b) => (
-              <BundleCard key={b.id} bundle={b} activePlanId={mp.subPlanId} onChoose={handleChange} ctaLabel={isAr ? `التبديل إلى ${b.nameAr}` : `Switch to ${b.nameEn}`} />
+              <BundleCard key={b.id} bundle={b} activePlanId={mp.subPlanId} onChoose={handleChange} period={period} ctaLabel={isAr ? `التبديل إلى ${b.nameAr}` : `Switch to ${b.nameEn}`} />
             ))}
           </View>
         ) : null}
