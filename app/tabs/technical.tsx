@@ -35,6 +35,7 @@ export default function TechnicalScreen() {
   const { TECHNICAL_CALLS, ARTICLES, TECHNICAL_ARTICLES, INDEX_UPDATES, SAUDI_TECHNICAL, USA_TECHNICAL, loading, refetch } = useData();
 
   const watchlists = ARTICLES.filter(a => a.section === "technical");
+  const watchlistItems = ARTICLES.filter(a => (a.section as string) === "watchlist");
 
   const isAr = language === "ar";
   const isSaudi = market === "saudi";
@@ -229,6 +230,49 @@ export default function TechnicalScreen() {
                   </Pressable>
                 );
               }}
+              contentContainerStyle={styles.hList}
+              showsHorizontalScrollIndicator={false}
+            />
+          </View>
+        )}
+
+        {/* Watchlist — stocks our analysts are watching (article section "watchlist") */}
+        {watchlistItems.length > 0 && (
+          <View style={{ marginTop: Spacing[6] }}>
+            <View style={styles.sectionPad}>
+              <Text style={[styles.sectionTitle, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>
+                {isAr ? "قائمة المتابعة" : "Watchlist"}
+              </Text>
+              <Text style={[styles.sectionSub, { color: C.text.muted, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}>
+                {isAr ? "أسهم يراقبها محللونا — إعدادات ومستويات وأفكار للمتابعة" : "Stocks our analysts are watching — setups, levels & ideas to track"}
+              </Text>
+            </View>
+            <FlatList
+              horizontal
+              inverted={isAr}
+              data={watchlistItems}
+              keyExtractor={i => i.id}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.watchCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}
+                  onPress={() => router.push({ pathname: "/article/[id]", params: { id: item.id } })}
+                >
+                  <View style={[styles.watchThumb, { backgroundColor: C.bg.elevated }]}>
+                    <View style={[styles.playCircle, { backgroundColor: `${C.accent.teal}20`, borderColor: `${C.accent.teal}40` }]}>
+                      <Ionicons name="eye-outline" size={18} color={C.accent.teal} />
+                    </View>
+                  </View>
+                  <View style={styles.watchBody}>
+                    <Text style={[styles.watchTitle, { color: C.text.primary, fontFamily: fontFamily("700") }]} numberOfLines={2}>
+                      {isAr && (item as any).titleAr ? (item as any).titleAr : item.title}
+                    </Text>
+                    <View style={[styles.watchMeta, isRTL && styles.rowRTL]}>
+                      <Text style={[styles.watchAuthor, { color: C.accent.teal, fontFamily: fontFamily("700") }]}>{item.author.join(", ")}</Text>
+                      <Text style={[styles.watchDate, { color: C.text.muted }]}>{formatDate(item.date)}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              )}
               contentContainerStyle={styles.hList}
               showsHorizontalScrollIndicator={false}
             />
