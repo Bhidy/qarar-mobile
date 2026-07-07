@@ -1,9 +1,13 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { formatDate } from "@/lib/format-date";
-import { ScrollView, View, StyleSheet, Pressable } from "react-native";
+import { ScrollView, View, StyleSheet, Pressable, Modal } from "react-native";
 import { Image } from "expo-image";
+import { WebView } from "react-native-webview";
+import { StatusBar } from "expo-status-bar";
+import * as ScreenOrientation from "expo-screen-orientation";
+import * as Haptics from "expo-haptics";
 import { Text } from "@/components/shared/AppText";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors, useTheme } from "@/context/ThemeContext";
@@ -11,6 +15,8 @@ import { Spacing, Radius, Typography } from "@/constants/theme";
 import { useData } from "@/hooks/useData";
 import { fontFamilyFor } from "@/lib/typography";
 import { NewsCover } from "@/components/shared/NewsCover";
+import { tradingViewChartHtml, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
+import { tvSymbol, tvInterval } from "@/lib/tv-symbol";
 
 /** Strip HTML → readable paragraphs (no WebView dependency on mobile). */
 function htmlToParagraphs(html?: string | null): string[] {
@@ -59,7 +65,7 @@ function AnalystChart({ uri, bg }: { uri: string; bg: string }) {
 export default function TechnicalArticleScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const C = useColors();
-  const { language, isRTL } = useTheme();
+  const { language, isRTL, isDark } = useTheme();
   const { TECHNICAL_ARTICLES } = useData();
   const isAr = language === "ar";
   const ff = (w: "400" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
@@ -68,6 +74,19 @@ export default function TechnicalArticleScreen() {
     () => (TECHNICAL_ARTICLES as any[]).find((a) => String(a.id) === String(id)),
     [TECHNICAL_ARTICLES, id]
   );
+
+  // ── Interactive chart (TradingView) — parity with the technical signals ──
+  const [showLiveChart, setShowLiveChart] = useState(false);
+  useEffect(() => {
+    if (!showLiveChart) return;
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    return () => { ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {}); };
+  }, [showLiveChart]);
+
+  const primaryTicker = item ? String(item.ticker || "").split(",")[0].trim() : "";
+  const chartMarket = item ? (item.market === "saudi" ? "saudi" : item.market === "usa" ? "usa" : "egypt") : "egypt";
+  const tvSym = item ? tvSymbol(primaryTicker, chartMarket, item.chartSymbol) : "";
+  const tvInt = item ? (tvInterval(item.chartTimeframe, item.chartInterval) || "D") : "D";
 
   const pick = (en?: string, ar?: string) => (isAr ? (ar || en) : (en || ar)) ?? "";
   const title = item ? pick(item.title, item.titleAr) : "";
@@ -139,6 +158,25 @@ export default function TechnicalArticleScreen() {
               </Pressable>
             )}
 
+            {tvSym ? (
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); setShowLiveChart(true); }}
+                style={[styles.liveCtaCard, { backgroundColor: `${C.accent.teal}10`, borderColor: `${C.accent.teal}33` }, isRTL && { flexDirection: "row-reverse" }]}
+              >
+                <View style={[styles.liveCtaIcon, { backgroundColor: `${C.accent.teal}22` }]}>
+                  <Ionicons name="pulse" size={20} color={C.accent.teal} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.liveCtaTitle, { color: C.text.primary }, isRTL && { textAlign: "right" }]}>{isAr ? "افتح الرسم البياني المباشر" : "Open Live Interactive Chart"}</Text>
+                  <Text style={[styles.liveCtaSub, { color: C.text.muted }, isRTL && { textAlign: "right" }]}>{isAr ? "رسم تفاعلي — مؤشرات وأدوات رسم" : "Real-time chart — indicators & drawing tools"}</Text>
+                </View>
+                <View style={[styles.liveCtaBtn, { backgroundColor: C.accent.teal }]}>
+                  <Ionicons name="eye-outline" size={14} color="#fff" />
+                  <Text style={styles.liveCtaBtnText}>{isAr ? "عرض" : "View"}</Text>
+                </View>
+              </Pressable>
+            ) : null}
+
             {blocks.map((b, bi) => (
               <View key={bi} style={{ marginTop: Spacing[4] }}>
                 <Text style={[styles.blockLabel, { color: (b as any).muted ? C.text.muted : C.text.primary, fontFamily: ff("800") }, isRTL && styles.right]}>
@@ -161,6 +199,45 @@ export default function TechnicalArticleScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* Live interactive chart — fullscreen TradingView WebView (same pattern as the
+          index-update + stock detail screens). */}
+      <Modal
+        visible={showLiveChart}
+        animationType="slide"
+        onRequestClose={() => setShowLiveChart(false)}
+        presentationStyle="fullScreen"
+        supportedOrientations={["portrait", "landscape-left", "landscape-right"]}
+      >
+        <SafeAreaProvider>
+          {showLiveChart ? <StatusBar hidden /> : null}
+          <SafeAreaView style={{ flex: 1, backgroundColor: C.bg.base }} edges={["top", "bottom", "left", "right"]}>
+            <View style={[styles.header, { borderBottomColor: C.border.subtle }, isRTL && styles.rowRTL]}>
+              <Pressable
+                style={[styles.backBtn, { backgroundColor: C.bg.elevated }]}
+                hitSlop={10}
+                onPress={() => { Haptics.selectionAsync(); setShowLiveChart(false); }}
+                accessibilityRole="button"
+                accessibilityLabel={isAr ? "إغلاق الرسم البياني" : "Close chart"}
+              >
+                <Ionicons name="close" size={22} color={C.text.primary} />
+              </Pressable>
+              <Text style={[styles.headerTitle, { color: C.text.primary }]}>{item?.ticker}</Text>
+              <View style={{ width: 36 }} />
+            </View>
+            {showLiveChart ? (
+              <WebView
+                source={{ html: tradingViewChartHtml(tvSym, tvInt, isDark ? "dark" : "light", isAr ? "ar" : "en", []), baseUrl: TV_BASE_URL }}
+                originWhitelist={["*"]}
+                javaScriptEnabled
+                domStorageEnabled
+                onShouldStartLoadWithRequest={webviewAllowRequest}
+                style={{ flex: 1, backgroundColor: C.bg.base }}
+              />
+            ) : null}
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -184,4 +261,10 @@ const styles = StyleSheet.create({
   blockLabel: { fontSize: Typography.md, fontWeight: "800", marginBottom: Spacing[1] },
   para: { fontSize: Typography.sm, lineHeight: 23, marginTop: Spacing[2] },
   disclaimerPara: { fontSize: Typography.xs, lineHeight: 19, marginTop: Spacing[1] },
+  liveCtaCard: { flexDirection: "row", alignItems: "center", gap: Spacing[3], borderRadius: Radius.lg, borderWidth: 1, padding: Spacing[3], marginTop: Spacing[4] },
+  liveCtaIcon: { width: 44, height: 44, borderRadius: Radius.md, alignItems: "center", justifyContent: "center" },
+  liveCtaTitle: { fontSize: Typography.sm, fontWeight: "800" },
+  liveCtaSub: { fontSize: 11, marginTop: 2 },
+  liveCtaBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.full },
+  liveCtaBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
 });

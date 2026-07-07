@@ -311,6 +311,8 @@ function toTechnicalArticle(row: any): TechnicalArticle {
     chartTimeframe:  row.chartTimeframe ?? row.charttimeframe ?? undefined,
     chartImage:      row.chartImage ?? row.chartimage ?? undefined,
     chartCaption:    row.chartCaption ?? row.chartcaption ?? undefined,
+    chartSymbol:     row.chartSymbol ?? row.chartsymbol ?? undefined,
+    chartInterval:   row.chartInterval ?? row.chartinterval ?? undefined,
     technicalBody:   row.technicalBody ?? row.technicalbody ?? undefined,
     technicalBodyAr: row.technicalBodyAr ?? row.technicalbodyar ?? undefined,
     priceSummary:    row.priceSummary ?? row.pricesummary ?? undefined,
