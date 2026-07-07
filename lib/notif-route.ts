@@ -42,9 +42,12 @@ export function resolveNotificationPath(data: NotifData): string | null {
   const ticker = str(data.ticker);
   const isTechArticle = type === "technical_article" || type === "technical-article";
   const taId = isTechArticle ? (id || articleId) : "";
+  const isFundArticle = type === "fundamental_article" || type === "fundamental-article";
+  const faId = isFundArticle ? (id || articleId) : "";
   const newsId = str(data.newsId) || (type === "news" ? id : "");
 
   if (taId) return `/technical-article/${taId}`;
+  if (faId) return `/fundamental-article/${faId}`;
   if (newsId) return `/news/${newsId}`;
   if (articleId) return `/article/${articleId}`;
   if (ticker) return `/stock/${ticker}`;

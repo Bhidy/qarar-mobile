@@ -285,6 +285,29 @@ export interface TechnicalArticle {
   published?: boolean;
 }
 
+// Fundamental Articles — analyst research prose (company deep-dives, earnings,
+// valuation) authored in the admin "Fundamental Articles" tab. No chart/price
+// metadata — just body + the Mubasher legal disclaimer (dynamic analyst name/title).
+export interface FundamentalArticle {
+  id: string;
+  ticker: string;
+  tickers?: string[];
+  company?: string;
+  companyAr?: string;
+  market?: "egypt" | "saudi" | "usa" | "both" | "commodities";
+  analyst?: string;
+  title: string;
+  titleAr?: string;
+  subtitle?: string;
+  subtitleAr?: string;
+  body?: string;
+  bodyAr?: string;
+  disclaimer?: string;
+  disclaimerAr?: string;
+  date?: string;
+  published?: boolean;
+}
+
 export const TECHNICAL_CALLS: TechnicalCall[] = [
   { ticker: "SUGR", company: "Delta Sugar", signal: "Buy", analyst: "Ayman Alshahid", date: "17 May 26", entryMin: 49.00, entryMax: 50.50, targetPrice: 73.50, stopLoss: 44.50, currentPrice: 48.78, return: 50.68, pattern: "Ascending Triangle", timeframe: "Daily", notes: "Breakout above EGP 50 confirms pattern. Volume expansion needed." },
   { ticker: "EGCH", company: "Egyptian Chemical Industries", signal: "Take Profit", analyst: "Ayman Alshahid", date: "14 May 26", entryMin: 9.20, entryMax: 9.80, targetPrice: 16.00, stopLoss: 8.50, currentPrice: 13.92, return: 12.35, pattern: "Channel Breakout", timeframe: "Weekly", notes: "Approaching resistance at 14.50. Take 25% profit here." },

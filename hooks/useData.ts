@@ -83,6 +83,7 @@ import {
   type FundamentalCall,
   type TechnicalCall,
   type TechnicalArticle,
+  type FundamentalArticle,
   type Notification,
 } from "@/constants/data";
 
@@ -110,6 +111,7 @@ interface AppData {
   FUNDAMENTAL_CALLS: FundamentalCall[];
   TECHNICAL_CALLS:   TechnicalCall[];
   TECHNICAL_ARTICLES: TechnicalArticle[];
+  FUNDAMENTAL_ARTICLES: FundamentalArticle[];
   INDEX_UPDATES: IndexUpdate[];
   NEWS:              typeof STATIC_NEWS;
   PORTFOLIOS:        typeof STATIC_PORTFOLIOS;
@@ -325,6 +327,31 @@ function toTechnicalArticle(row: any): TechnicalArticle {
   } as TechnicalArticle;
 }
 
+// Fundamental Articles — analyst research prose (body + Mubasher disclaimer), no
+// chart/price metadata. Same dual-case-read defensiveness as toTechnicalArticle.
+function toFundamentalArticle(row: any): FundamentalArticle {
+  const tickers = String(row.ticker ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
+  return {
+    id:           row.id,
+    ticker:       (primaryTicker(row.ticker) ?? row.ticker),
+    tickers,
+    company:      row.company ?? undefined,
+    companyAr:    row.companyAr ?? row.companyar ?? undefined,
+    market:       (row.market ?? "egypt"),
+    analyst:      Array.isArray(row.analyst) ? row.analyst.join(", ") : (row.analyst ?? undefined),
+    title:        row.title ?? "",
+    titleAr:      row.titleAr ?? row.titlear ?? undefined,
+    subtitle:     row.subtitle ?? undefined,
+    subtitleAr:   row.subtitleAr ?? row.subtitlear ?? undefined,
+    body:         row.body ?? undefined,
+    bodyAr:       row.bodyAr ?? row.bodyar ?? undefined,
+    disclaimer:   row.disclaimer ?? undefined,
+    disclaimerAr: row.disclaimerAr ?? row.disclaimerar ?? undefined,
+    date:         row.date ?? undefined,
+    published:    row.published,
+  } as FundamentalArticle;
+}
+
 // Index Updates — analyst commentary on a market index (EGX30/EGX70/TASI/S&P 500/
 // Nasdaq 100/Dow Jones), distinct from per-stock Technical Calls. Mirrors
 // toTechnicalArticle's dual-case-read defensiveness.
@@ -497,6 +524,7 @@ function initialData(): DataState {
     FUNDAMENTAL_CALLS: mk(STATIC_FUND, []),
     TECHNICAL_CALLS:   mk(STATIC_TECH, []),
     TECHNICAL_ARTICLES: [],
+    FUNDAMENTAL_ARTICLES: [],
     INDEX_UPDATES:     [],
     NEWS:              mk(STATIC_NEWS, []),
     PORTFOLIOS:        mk(STATIC_PORTFOLIOS, []),
@@ -584,7 +612,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           { data: portfolioRows },
           { data: notifRows },
         ],
-        [priceRows, companyRows, researchRows, techArticleRows, indexUpdateRows, indexRows, calendarRows],
+        [priceRows, companyRows, researchRows, techArticleRows, fundArticleRows, indexUpdateRows, indexRows, calendarRows],
       ] = await Promise.all([
         Promise.all([
           supabasePublic.from("articles").select("*").order("createdAt", { ascending: false }),
@@ -600,6 +628,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           feedSelect("companies"),
           feedSelect("research_docs", "reportDate"),
           feedSelect("technical_articles", "createdAt"),
+          feedSelect("fundamental_articles", "createdAt"),
           feedSelect("index_updates", "createdAt"),
           // EGX30 / TASI / SPX daily index bars → matched-period benchmark (#1). Fetched
           // PER TICKER + windowed so each query stays under PostgREST's 1000-row cap and
@@ -659,6 +688,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // Technical Articles — published, normalized, all markets (the screen filters by
       // the active market with a "both"-tolerant check).
       const techArticles = (techArticleRows ?? []).filter(isPub).map(toTechnicalArticle);
+      const fundArticles = (fundArticleRows ?? []).filter(isPub).map(toFundamentalArticle);
       const indexUpdates = (indexUpdateRows ?? []).filter(isPub).map(toIndexUpdate);
 
       commit({
@@ -666,6 +696,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         FUNDAMENTAL_CALLS: egxFund.length       > 0 ? applyBenchmark(applyLivePrices(egxFund.map(toFundamental), PRICES, "remaining"), indexMap, "egypt") : mk(STATIC_FUND, []),
         TECHNICAL_CALLS:   egxTech.length       > 0 ? applyLivePrices(egxTech.map(toTechnical), PRICES, "return")     : mk(STATIC_TECH, []),
         TECHNICAL_ARTICLES: techArticles,
+        FUNDAMENTAL_ARTICLES: fundArticles,
         INDEX_UPDATES:     indexUpdates,
         NEWS:              egxNews.length        > 0 ? egxNews                             : mk(STATIC_NEWS, []),
         PORTFOLIOS:        (portfolioRows ?? []).length > 0
@@ -787,7 +818,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
     const HOT_TABLES = [
       "prices", "fundamental_calls", "technical_calls",
-      "news_items", "notifications", "articles", "technical_articles", "index_updates",
+      "news_items", "notifications", "articles", "technical_articles", "fundamental_articles", "index_updates",
     ];
     let channel = sb.channel("ss-live");
     for (const table of HOT_TABLES) {

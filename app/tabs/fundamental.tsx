@@ -29,7 +29,7 @@ import { RichText, looksLikeHtml } from "@/lib/rich-text";
 export default function FundamentalScreen() {
   const C = useColors();
   const { market, language, isRTL } = useTheme();
-  const { FUNDAMENTAL_CALLS, ARTICLES, SAUDI_FUNDAMENTAL, USA_FUNDAMENTAL, loading, refetch } = useData();
+  const { FUNDAMENTAL_CALLS, ARTICLES, FUNDAMENTAL_ARTICLES, SAUDI_FUNDAMENTAL, USA_FUNDAMENTAL, loading, refetch } = useData();
   const [activeFilter, setActiveFilter] = useState<"all" | "invest" | "hold">("all");
 
   const isAr = language === "ar";
@@ -37,6 +37,11 @@ export default function FundamentalScreen() {
   const isUsa = market === "usa";
 
   const recentContent = ARTICLES.filter(a => a.section === "fundamental");
+
+  // Fundamental Articles (analyst research prose) — market-aware, published-only.
+  const fundArticles = FUNDAMENTAL_ARTICLES.filter(a =>
+    a.market === market || a.market === "both" || a.market === "commodities" || (!a.market && market === "egypt"),
+  );
 
   const fontFamily = (weight: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, weight);
 
@@ -155,6 +160,47 @@ export default function FundamentalScreen() {
           fontFamily={fontFamily}
           C={C}
         />
+
+        {/* Fundamental Articles — analyst research prose (parity with web FundamentalArticles). */}
+        {fundArticles.length > 0 && (
+          <View style={{ marginTop: Spacing[6] }}>
+            <View style={styles.sectionPad}>
+              <Text style={[styles.sectionTitle, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>
+                {isAr ? "المقالات الأساسية" : "Fundamental Articles"}
+              </Text>
+              <Text style={[styles.sectionSub, { color: C.text.muted, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}>
+                {isAr ? "تحليلات معمّقة للشركات والنتائج والتقييم من محللينا." : "Company deep-dives, earnings and valuation notes from our analysts."}
+              </Text>
+            </View>
+            <FlatList
+              horizontal
+              inverted={isAr}
+              data={fundArticles}
+              keyExtractor={i => i.id}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.articleCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}
+                  onPress={() => router.push({ pathname: "/fundamental-article/[id]", params: { id: item.id } })}
+                >
+                  <View style={[styles.articleThumb, { backgroundColor: C.bg.elevated }]}>
+                    <ArticleCover ticker={item.ticker} />
+                  </View>
+                  <View style={styles.articleBody}>
+                    <Text style={[styles.articleTitle, { color: C.text.primary, fontFamily: fontFamily("700") }]} numberOfLines={2}>
+                      {isAr && item.titleAr ? item.titleAr : item.title}
+                    </Text>
+                    <View style={[styles.articleMeta, isRTL && styles.rowRTL]}>
+                      <Text style={[styles.articleAuthor, { color: C.text.muted, fontFamily: fontFamily("600") }]} numberOfLines={1}>{item.analyst ?? ""}</Text>
+                      <Text style={[styles.articleDate, { color: C.text.muted }]}>{item.date ? formatDate(item.date) : ""}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              )}
+              contentContainerStyle={styles.hList}
+              showsHorizontalScrollIndicator={false}
+            />
+          </View>
+        )}
 
         {/* Fundamental Reports — parity with web LatestContent (always shown when items exist). */}
         {recentContent.length > 0 && (
