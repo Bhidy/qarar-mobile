@@ -1045,20 +1045,6 @@ const s = StyleSheet.create({
   },
   ghostText: { color: BRAND.primaryInk, fontSize: 14 },
 
-  // Google Sign-In
-  appleBtn: { height: 56, width: "100%", borderRadius: 18, marginBottom: 10 },
-  googleBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 10, height: 56, borderRadius: 18,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1, borderColor: BRAND.border,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
-  },
-  googleLogoWrap: { width: 24, alignItems: "center", justifyContent: "center" },
-  googleText: { color: BRAND.ink, fontSize: 14 },
-  googleTerms: { fontSize: 12, color: BRAND.muted, lineHeight: 18 },
-
   // Link row (back-to-signin etc)
   linkRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: Spacing[1] },
   linkText: { fontSize: 14 },
