@@ -184,12 +184,9 @@ function AppLayout() {
         <Stack.Screen name="biometric" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />
         <Stack.Screen name="edit-profile" options={{ animation: "slide_from_right", headerShown: false }} />
-        {/* Analyst Marketplace — bundle subscriptions (frontend demo, flag-gated entry) */}
-        <Stack.Screen name="marketplace/index" options={{ animation: "slide_from_right" }} />
-        <Stack.Screen name="marketplace/analysts" options={{ animation: "slide_from_right" }} />
-        <Stack.Screen name="marketplace/[id]" options={{ animation: "slide_from_right" }} />
-        <Stack.Screen name="marketplace/checkout" options={{ animation: "slide_from_right" }} />
-        <Stack.Screen name="marketplace/subscription" options={{ animation: "slide_from_right" }} />
+        {/* Analyst Marketplace — flag-gated demo group. Its own _layout redirects
+            to the app when MARKETPLACE_ENABLED is false, so nothing paid is reachable. */}
+        <Stack.Screen name="marketplace" options={{ animation: "slide_from_right" }} />
       </Stack>
     </SafeAreaProvider>
   );

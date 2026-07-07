@@ -21,7 +21,6 @@ import {
   View, TextInput, Pressable, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Linking,
 } from "react-native";
-import Svg, { Path } from "react-native-svg";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -34,7 +33,6 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as LocalAuthentication from "expo-local-authentication";
-import * as AppleAuthentication from "expo-apple-authentication";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useTheme } from "@/context/ThemeContext";
 import { Spacing, Typography, Radius } from "@/constants/theme";
@@ -211,7 +209,7 @@ export default function LoginScreen() {
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
   const df = (w: "400" | "600" | "700" | "800") => displayFontFor(isAr, w);
-  const { signInWithPassword, signInWithGoogle, signInWithApple, appleAuthAvailable, signUp, sendOtp, verifyOtp, resetPassword, user } = useAuth();
+  const { signInWithPassword, signUp, sendOtp, verifyOtp, resetPassword, user } = useAuth();
 
   const T = (en: string, ar: string) => (isAr ? ar : en);
 
@@ -225,8 +223,6 @@ export default function LoginScreen() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [googleBusy, setGoogleBusy] = useState(false);
-  const [appleBusy, setAppleBusy] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -349,48 +345,6 @@ export default function LoginScreen() {
       }
     }
     return errs;
-  }
-
-  async function handleGoogleSignIn() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setGoogleBusy(true);
-    setErrors({});
-    try {
-      const r = await signInWithGoogle();
-      if (r.error !== undefined) {
-        // non-empty = real error to surface; "" = user cancelled (show nothing).
-        // Either way we must NOT navigate — there is no session.
-        if (r.error) setErrors({ general: r.error });
-        return;
-      }
-      await AsyncStorage.setItem("@onboarding_done", "true");
-      router.replace("/tabs");
-    } finally {
-      setGoogleBusy(false);
-    }
-  }
-
-  async function handleAppleSignIn() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setAppleBusy(true);
-    setErrors({});
-    try {
-      const r = await signInWithApple();
-      if (r.error !== undefined) {
-        // non-empty = real error to surface; "" = user cancelled (show nothing).
-        // Either way we must NOT navigate — there is no session.
-        if (r.error) {
-          setErrors({ general: r.error });
-          // Surface as a prominent alert too, so the exact Apple error code/cause is unmissable.
-          Alert.alert("Sign in with Apple", r.error);
-        }
-        return;
-      }
-      await AsyncStorage.setItem("@onboarding_done", "true");
-      router.replace("/tabs");
-    } finally {
-      setAppleBusy(false);
-    }
   }
 
   async function submit() {
@@ -765,80 +719,6 @@ export default function LoginScreen() {
                 {errors.terms ? (
                   <Text style={[s.fieldError, { fontFamily: ff("500"), marginTop: -8 }]}>{errors.terms}</Text>
                 ) : null}
-
-                {/* Google Sign-In — signin and signup only */}
-                {(mode === "signin" || mode === "signup") && (
-                  <>
-                    <View style={[s.dividerRow, { marginVertical: 4 }]}>
-                      <View style={s.dividerLine} />
-                      <Text style={[s.dividerLabel, { fontFamily: ff("700") }]}>
-                        {T("or", "أو")}
-                      </Text>
-                      <View style={s.dividerLine} />
-                    </View>
-
-                    {/* Sign in with Apple — iOS only, shown first per Apple HIG.
-                        Required by App Store Guideline 4.8 alongside Google. */}
-                    {appleAuthAvailable && (
-                      appleBusy ? (
-                        <View style={[s.appleBtn, { alignItems: "center", justifyContent: "center" }]}>
-                          <ActivityIndicator color="#fff" />
-                        </View>
-                      ) : (
-                        <AppleAuthentication.AppleAuthenticationButton
-                          buttonType={mode === "signup"
-                            ? AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP
-                            : AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                          cornerRadius={18}
-                          style={s.appleBtn}
-                          onPress={handleAppleSignIn}
-                        />
-                      )
-                    )}
-
-                    <Pressable
-                      onPress={handleGoogleSignIn}
-                      disabled={googleBusy || busy}
-                      style={({ pressed }) => [
-                        s.googleBtn,
-                        { opacity: googleBusy || busy ? 0.65 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] },
-                      ]}
-                    >
-                      {googleBusy ? (
-                        <ActivityIndicator color={BRAND.primaryInk} />
-                      ) : (
-                        <>
-                          {/* Google "G" logo */}
-                          <View style={s.googleLogoWrap}>
-                            <Svg width={20} height={20} viewBox="0 0 24 24">
-                              <Path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                              <Path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                              <Path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-                              <Path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                            </Svg>
-                          </View>
-                          <Text style={[s.googleText, { fontFamily: ff("700") }]}>
-                            {T("Continue with Google", "المتابعة بحساب Google")}
-                          </Text>
-                        </>
-                      )}
-                    </Pressable>
-
-                    {mode === "signup" && (
-                      <Text style={[s.googleTerms, { fontFamily: ff("400"), textAlign: isAr ? "right" : "left" }]}>
-                        {T("By continuing with Google, you agree to our ", "بالمتابعة عبر Google، أنت توافق على ")}
-                        <Text onPress={() => Linking.openURL("https://mubashersignals.com/terms")} style={{ color: BRAND.primary, fontFamily: ff("700") }}>
-                          {T("Terms", "الشروط")}
-                        </Text>
-                        {T(" and ", " و")}
-                        <Text onPress={() => Linking.openURL("https://mubashersignals.com/privacy")} style={{ color: BRAND.primary, fontFamily: ff("700") }}>
-                          {T("Privacy Policy", "سياسة الخصوصية")}
-                        </Text>.
-                      </Text>
-                    )}
-                  </>
-                )}
 
                 {/* Primary CTA */}
                 <Pressable

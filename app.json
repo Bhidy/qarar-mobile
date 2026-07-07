@@ -60,7 +60,6 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-apple-authentication",
       [
         "expo-image-picker",
         {
@@ -89,12 +88,6 @@
       "./plugins/with-fast-android.js",
       "./plugins/with-ios-modular-headers.js",
       "./plugins/with-android-gradle-memory.js",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.881007730616-6hm4qva60033c1mimhmpb72trhkk0kqo"
-        }
-      ],
       [
         "expo-build-properties",
         {
