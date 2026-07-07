@@ -4,6 +4,7 @@ import { ScrollView, View, StyleSheet, Pressable, Image, Linking, Modal } from "
 import { WebView } from "react-native-webview";
 import Svg, { Path, Defs, LinearGradient as SvgLinear, Stop, Circle, Line as SvgLine } from "react-native-svg";
 import { Text } from "@/components/shared/AppText";
+import { Disclaimer } from "@/components/shared/Disclaimer";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
@@ -555,6 +556,7 @@ export default function StockDetail() {
           </View>
         )}
 
+        <Disclaimer />
         <View style={{ height: Spacing[8] }} />
       </ScrollView>
 
