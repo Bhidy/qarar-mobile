@@ -20,6 +20,9 @@ export interface UsaStock {
   sp500?: number;         // vs S&P 500 index — computed live by applyBenchmark when absent
   thesis: string;
   thesisAr: string;
+  // Mubasher legal disclaimer (تنويه) — rich HTML EN/AR; collapsible on the stock page.
+  disclaimer?: string;
+  disclaimerAr?: string;
 }
 
 export const USA_FUNDAMENTAL: UsaStock[] = [
@@ -75,6 +78,9 @@ export interface UsaTechnical {
   pattern: string;
   timeframe: string;
   notes?: string;
+  // Mubasher legal disclaimer (تنويه) — rich HTML EN/AR; collapsible on the stock page.
+  disclaimer?: string;
+  disclaimerAr?: string;
 }
 
 export const USA_TECHNICAL: UsaTechnical[] = [

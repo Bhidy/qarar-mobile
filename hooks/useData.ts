@@ -408,6 +408,8 @@ function toSaudiStock(row: any): SaudiStock {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    disclaimer:     row.disclaimer ?? undefined,
+    disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as any;
 }
 
@@ -435,6 +437,8 @@ function toSaudiTechnical(row: any): SaudiTechnical {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    disclaimer:     row.disclaimer ?? undefined,
+    disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as any;
 }
 
@@ -464,6 +468,8 @@ function toUsaStock(row: any): UsaStock {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    disclaimer:     row.disclaimer ?? undefined,
+    disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as any;
 }
 
@@ -491,6 +497,8 @@ function toUsaTechnical(row: any): UsaTechnical {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    disclaimer:     row.disclaimer ?? undefined,
+    disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as any;
 }
 

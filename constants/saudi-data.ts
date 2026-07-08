@@ -19,6 +19,9 @@ export interface SaudiStock {
   tadawul: number;          // vs Tadawul All Share Index
   thesis: string;
   thesisAr: string;
+  // Mubasher legal disclaimer (تنويه) — rich HTML EN/AR; collapsible on the stock page.
+  disclaimer?: string;
+  disclaimerAr?: string;
 }
 
 export const SAUDI_FUNDAMENTAL: SaudiStock[] = [
@@ -79,6 +82,9 @@ export interface SaudiTechnical {
   pattern: string;
   timeframe: string;
   notes?: string;
+  // Mubasher legal disclaimer (تنويه) — rich HTML EN/AR; collapsible on the stock page.
+  disclaimer?: string;
+  disclaimerAr?: string;
 }
 
 export const SAUDI_TECHNICAL: SaudiTechnical[] = [
