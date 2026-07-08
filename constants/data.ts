@@ -37,6 +37,9 @@ export interface Article {
   chartSymbol?: string;
   chartInterval?: string;
   chartStudies?: string;
+  // Mubasher legal disclaimer (تنويه) — Fundamental Reports only; rich HTML EN/AR.
+  disclaimer?: string;
+  disclaimerAr?: string;
 }
 
 export const ARTICLES: Article[] = [
@@ -202,6 +205,9 @@ export interface FundamentalCall {
   sector: string;
   thesis?: string;
   articleId?: string;
+  // Mubasher legal disclaimer (تنويه) — rich HTML EN/AR; collapsible on the stock page.
+  disclaimer?: string;
+  disclaimerAr?: string;
 }
 
 export const FUNDAMENTAL_CALLS: FundamentalCall[] = [
@@ -255,6 +261,9 @@ export interface TechnicalCall {
   aggressiveSL?: number;
   trailingStopPct?: number;
   trend?: "uptrend" | "downtrend" | "sideways";
+  // Mubasher legal disclaimer (تنويه) — rich HTML EN/AR; collapsible on the stock page.
+  disclaimer?: string;
+  disclaimerAr?: string;
 }
 
 // Editorial chart-led write-up (admin "Technical Articles" type). Distinct from a

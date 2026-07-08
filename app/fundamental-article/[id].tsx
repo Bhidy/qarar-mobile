@@ -45,11 +45,10 @@ export default function FundamentalArticleScreen() {
   const subtitle = item ? pick(item.subtitle, item.subtitleAr) : "";
 
   const blocks = useMemo(() => {
-    if (!item) return [] as { label: string; paras: string[]; muted?: boolean }[];
-    return [
+    const list: { label: string; paras: string[]; muted?: boolean }[] = [
       { label: isAr ? "التحليل" : "Analysis", paras: htmlToParagraphs(pick(item.body, item.bodyAr)) },
-      { label: isAr ? "تنويه" : "Disclaimer", paras: htmlToParagraphs(pick(item.disclaimer, item.disclaimerAr)), muted: true },
-    ].filter((b) => b.paras.length > 0);
+    ];
+    return list.filter((b) => b.paras.length > 0);
   }, [item, isAr]);
 
   return (

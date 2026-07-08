@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabasePublic } from "@/lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors, useTheme } from "@/context/ThemeContext";
@@ -19,6 +20,7 @@ import { TickerLogo } from "@/components/shared/TickerLogo";
 import { useData } from "@/hooks/useData";
 import { RichText, looksLikeHtml, htmlHasTable } from "@/lib/rich-text";
 import { CallUpdates } from "@/components/shared/CallUpdates";
+import { CollapsibleDisclaimer } from "@/components/shared/CollapsibleDisclaimer";
 import { fontFamilyFor, displayFontFor } from "@/lib/typography";
 import { ConvictionMark } from "@/components/shared/ConvictionMark";
 import { WEB_BASE } from "@/constants/site";
@@ -78,6 +80,21 @@ export default function StockDetail() {
     ?? (SAUDI_TECHNICAL as any[]).find(c => c.ticker === ticker);
 
   const isFund = !!fundCall;
+
+  // ── Watchlist bookmark (local, persisted) — the header "Watch" toggle ──
+  const [watched, setWatched] = useState(false);
+  useEffect(() => {
+    if (!ticker) return;
+    AsyncStorage.getItem(`@watch:${ticker}`).then((v) => setWatched(v === "1")).catch(() => {});
+  }, [ticker]);
+  const toggleWatch = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setWatched((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(`@watch:${ticker}`, next ? "1" : "0").catch(() => {});
+      return next;
+    });
+  };
 
   // ── Interactive chart (TradingView) — mirrors the customer web signal page ──
   const [showLiveChart, setShowLiveChart] = useState(false);
@@ -214,9 +231,14 @@ export default function StockDetail() {
           <Ionicons name={isRTL ? "chevron-forward" : "chevron-back"} size={20} color={C.text.primary} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: C.text.primary }]}>{ticker}</Text>
-        <Pressable style={[styles.watchBtn, { borderColor: C.border.default }]} onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
-          <Ionicons name="bookmark-outline" size={16} color={C.text.secondary} />
-          <Text style={[styles.watchBtnText, { color: C.text.secondary }]}>{isAr ? "متابعة" : "Watch"}</Text>
+        <Pressable
+          style={[styles.watchBtn, { borderColor: watched ? C.primary : C.border.default, backgroundColor: watched ? `${C.primary}14` : "transparent" }]}
+          onPress={toggleWatch}
+        >
+          <Ionicons name={watched ? "bookmark" : "bookmark-outline"} size={16} color={watched ? C.primary : C.text.secondary} />
+          <Text style={[styles.watchBtnText, { color: watched ? C.primary : C.text.secondary }]}>
+            {watched ? (isAr ? "مُتابَع" : "Watching") : (isAr ? "متابعة" : "Watch")}
+          </Text>
         </Pressable>
       </View>
 
@@ -417,6 +439,7 @@ export default function StockDetail() {
                   <CallUpdates updates={(fundCall as any).updates} isAr={isAr} isRTL={isRTL} C={C} fontFamily={ff} defaultOpen />
                 </View>
               ) : null}
+              <CollapsibleDisclaimer html={isAr ? ((fundCall as any).disclaimerAr || (fundCall as any).disclaimer) : ((fundCall as any).disclaimer || (fundCall as any).disclaimerAr)} />
             </View>
           </View>
         ) : null}
@@ -505,6 +528,7 @@ export default function StockDetail() {
                   <CallUpdates updates={(techCall as any).updates} isAr={isAr} isRTL={isRTL} C={C} fontFamily={ff} defaultOpen />
                 </View>
               ) : null}
+              <CollapsibleDisclaimer html={isAr ? ((techCall as any).disclaimerAr || (techCall as any).disclaimer) : ((techCall as any).disclaimer || (techCall as any).disclaimerAr)} />
             </View>
           </View>
         ) : null}

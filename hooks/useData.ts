@@ -220,6 +220,9 @@ function toArticle(row: any): Article {
     chartSymbol:    row.chartSymbol ?? row.chartsymbol ?? undefined,
     chartInterval:  row.chartInterval ?? row.chartinterval ?? undefined,
     chartStudies:   row.chartStudies ?? row.chartstudies ?? undefined,
+    // Mubasher legal disclaimer (Fundamental Reports) → collapsible on the reader.
+    disclaimer:     row.disclaimer ?? undefined,
+    disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   };
 }
 
@@ -251,6 +254,8 @@ function toFundamental(row: any): FundamentalCall {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    disclaimer:     row.disclaimer ?? undefined,
+    disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as FundamentalCall;
 }
 
@@ -295,6 +300,8 @@ function toTechnical(row: any): TechnicalCall {
     aggressiveSL:    row.aggressiveSL ?? row.aggressivesl ?? undefined,
     trailingStopPct: row.trailingStopPct ?? row.trailingstoppct ?? undefined,
     trend:           row.trend ?? undefined,
+    disclaimer:      row.disclaimer ?? undefined,
+    disclaimerAr:    row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as TechnicalCall;
 }
 

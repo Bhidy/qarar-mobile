@@ -97,7 +97,6 @@ export default function TechnicalArticleScreen() {
     return [
       { label: isAr ? "الجزء الفني" : "Technical Analysis", paras: htmlToParagraphs(pick(item.technicalBody, item.technicalBodyAr)) },
       { label: isAr ? "ملخص حركة السعر" : "Price Movement Summary", paras: htmlToParagraphs(pick(item.priceSummary, item.priceSummaryAr)) },
-      { label: isAr ? "تنويه" : "Disclaimer", paras: htmlToParagraphs(pick(item.disclaimer, item.disclaimerAr)), muted: true } as any,
     ].filter((b) => b.paras.length > 0);
   }, [item, isAr]);
 

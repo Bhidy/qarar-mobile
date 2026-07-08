@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { formatDate } from "@/lib/format-date";
-import { ScrollView, View, StyleSheet, Pressable, Image, Modal } from "react-native";
+import { ScrollView, View, StyleSheet, Pressable, Image, Modal, Share } from "react-native";
 import { WebView } from "react-native-webview";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -14,7 +14,9 @@ import { Spacing, Radius, Typography } from "@/constants/theme";
 import { SignalBadge } from "@/components/shared/SignalBadge";
 import { useData } from "@/hooks/useData";
 import { RichText, looksLikeHtml } from "@/lib/rich-text";
+import { CollapsibleDisclaimer } from "@/components/shared/CollapsibleDisclaimer";
 import { fontFamilyFor } from "@/lib/typography";
+import { WEB_BASE } from "@/constants/site";
 import { tradingViewChartHtml, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
 import { tvSymbol, tvInterval, parseTvStudies } from "@/lib/tv-symbol";
 
@@ -100,7 +102,16 @@ export default function ArticleDetail() {
         <Text style={[styles.headerTitle, { color: C.text.primary }]} numberOfLines={1}>
           {article.ticker ?? (isAr ? "الأبحاث" : "Research")}
         </Text>
-        <Pressable style={[styles.shareBtn, { backgroundColor: C.bg.elevated }]}>
+        <Pressable
+          style={[styles.shareBtn, { backgroundColor: C.bg.elevated }]}
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            Share.share({
+              title: article.title,
+              message: `${article.title}\n\n${WEB_BASE}/article/${article.id}`,
+            }).catch(() => {});
+          }}
+        >
           <Ionicons name="share-outline" size={18} color={C.text.secondary} />
         </Pressable>
       </View>
@@ -230,6 +241,11 @@ export default function ArticleDetail() {
               <Text key={i} style={[styles.bodyText, { color: C.text.secondary, fontFamily: ff("400"), textAlign: isAr ? "right" : "left", writingDirection: isAr ? "rtl" : "ltr" }]}>{para}</Text>
             ));
           })()}
+        </View>
+
+        {/* Disclaimer (تنويه) — Fundamental Reports; collapsed, tap to expand */}
+        <View style={styles.sectionPad}>
+          <CollapsibleDisclaimer html={isAr ? (article.disclaimerAr || article.disclaimer) : (article.disclaimer || article.disclaimerAr)} />
         </View>
 
         {/* "Key Takeaways" was a generic 3-bullet template (same text on every
