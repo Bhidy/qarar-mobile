@@ -100,10 +100,13 @@ Profiles are defined in `eas.json`:
 | `production` | store build (auto‑increment) | production |
 
 ```bash
-eas build --profile production --platform ios
-eas build --profile production --platform android
-eas submit --profile production --platform ios      # ASC API key
-eas submit --profile production --platform android   # Play service account
+# ⚠️ DEPRECATED — EAS CLOUD builds are FORBIDDEN (owner rule: local-only).
+# THE single sanctioned release path (preflight → build → verify → upload → tag):
+bash scripts/release.sh ios       # TestFlight (pure xcodebuild via ../build_testflight.sh)
+bash scripts/release.sh android   # AAB via eas --local + Play submit
+bash scripts/release.sh both      # parallel
+# Version stamping (authoritative iOS number from scripts/release-preflight.sh):
+bash scripts/release.sh stamp <iosBuild> <androidVersionCode>   # then commit
 ```
 
 `scripts/preflight-build-check.sh` runs sanity checks before a build.
