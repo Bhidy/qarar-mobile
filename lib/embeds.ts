@@ -130,3 +130,84 @@ export function spotifyEpisodeHtml(episodeId: string, autoplay = false, height =
 </script>
 </body></html>`;
 }
+
+/**
+ * In-house premium podcast player (replaces the Spotify embed, which interrupted
+ * playback with Spotify marketing — "Follow", "Get the Spotify app"). Plays the
+ * episode's direct MP3 (from the show's public RSS feed) in an HTML5 <audio>
+ * under our own brand UI: circular play button, seekable progress, elapsed/total,
+ * speed toggle. Self-contained (no external scripts), RTL-aware, ~110px tall.
+ * Use with baseUrl SPOTIFY_BASE_URL? No — audio is on anchor.fm/cloudfront; any
+ * https baseUrl works. Pair with webviewAllowRequest as usual.
+ */
+export function audioPlayerHtml(
+  audioUrl: string,
+  title: string,
+  opts: { isAr?: boolean; dark?: boolean; autoplay?: boolean } = {},
+): string {
+  const { isAr = false, dark = false, autoplay = false } = opts;
+  const dir = isAr ? "rtl" : "ltr";
+  const ink = dark ? "#F4F6FB" : "#101729";
+  const muted = dark ? "rgba(244,246,251,0.55)" : "rgba(16,23,41,0.5)";
+  const track = dark ? "rgba(244,246,251,0.18)" : "rgba(16,23,41,0.12)";
+  const surface = "transparent";
+  return `<!DOCTYPE html><html dir="${dir}"><head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:${surface};height:100%;overflow:hidden;
+    font-family:-apple-system,'Segoe UI',Roboto,'Cairo',sans-serif}
+  .wrap{display:flex;align-items:center;gap:14px;padding:14px 16px;height:100%}
+  .btn{width:52px;height:52px;border-radius:50%;border:0;flex:none;cursor:pointer;
+    background:linear-gradient(135deg,#0B4DD4 0%,#08379B 100%);
+    box-shadow:0 10px 24px -10px rgba(11,77,212,.55);display:flex;align-items:center;justify-content:center}
+  .btn svg{width:20px;height:20px;fill:#fff}
+  .main{flex:1;min-width:0}
+  .title{font-size:13px;font-weight:700;color:${ink};white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;margin:0 0 8px}
+  .bar{position:relative;height:5px;border-radius:99px;background:${track};cursor:pointer}
+  .fill{position:absolute;top:0;${isAr ? "right" : "left"}:0;height:100%;border-radius:99px;width:0%;
+    background:linear-gradient(90deg,#0B4DD4,#08379B)}
+  .times{display:flex;justify-content:space-between;font-size:10.5px;color:${muted};
+    font-variant-numeric:tabular-nums;margin-top:5px}
+  .spd{flex:none;border:1px solid ${track};background:transparent;color:${ink};border-radius:99px;
+    font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;font-variant-numeric:tabular-nums}
+</style></head><body>
+<div class="wrap">
+  <button class="btn" id="pp" aria-label="play">
+    <svg id="ic" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <div class="main">
+    <p class="title">${title.replace(/</g, "&lt;")}</p>
+    <div class="bar" id="bar"><div class="fill" id="fill"></div></div>
+    <div class="times"><span id="cur">0:00</span><span id="dur">–:––</span></div>
+  </div>
+  <button class="spd" id="spd">1×</button>
+</div>
+<audio id="a" preload="metadata" src="${audioUrl.replace(/"/g, "&quot;")}"></audio>
+<script>
+  var a=document.getElementById('a'),pp=document.getElementById('pp'),ic=document.getElementById('ic'),
+      bar=document.getElementById('bar'),fill=document.getElementById('fill'),
+      cur=document.getElementById('cur'),dur=document.getElementById('dur'),spd=document.getElementById('spd');
+  var SP=[1,1.25,1.5,2],si=0;
+  var PLAY='M8 5v14l11-7z',PAUSE='M6 5h4v14H6zM14 5h4v14h-4z';
+  function fmt(s){if(!isFinite(s)||s<0)s=0;var m=Math.floor(s/60),x=Math.floor(s%60);return m+':'+(x<10?'0':'')+x;}
+  function paint(){ic.innerHTML='<path d="'+(a.paused?PLAY:PAUSE)+'"/>';}
+  pp.onclick=function(){ if(a.paused){a.play().catch(function(){});} else {a.pause();} };
+  a.onplay=paint; a.onpause=paint; a.onended=paint;
+  a.onloadedmetadata=function(){ dur.textContent=fmt(a.duration); };
+  a.ontimeupdate=function(){
+    cur.textContent=fmt(a.currentTime);
+    if(a.duration) fill.style.width=(a.currentTime/a.duration*100)+'%';
+  };
+  bar.onclick=function(e){
+    if(!a.duration) return;
+    var r=bar.getBoundingClientRect(); var x=(e.clientX-r.left)/r.width;
+    ${isAr ? "x=1-x;" : ""}
+    a.currentTime=Math.max(0,Math.min(1,x))*a.duration;
+  };
+  spd.onclick=function(){ si=(si+1)%SP.length; a.playbackRate=SP[si]; spd.textContent=SP[si]+'\\u00D7'; };
+  ${autoplay ? "a.play().catch(function(){});" : ""}
+</script>
+</body></html>`;
+}

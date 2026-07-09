@@ -27,7 +27,7 @@ import { useColors, useTheme } from "@/context/ThemeContext";
 import { Spacing, Radius } from "@/constants/theme";
 import { fontFamilyFor } from "@/lib/typography";
 import { WEB_BASE } from "@/constants/site";
-import { spotifyEpisodeHtml, webviewAllowRequest, SPOTIFY_BASE_URL } from "@/lib/embeds";
+import { audioPlayerHtml, webviewAllowRequest, SPOTIFY_BASE_URL } from "@/lib/embeds";
 import { getCachedJson, fetchAndCacheJson, PODCAST_KEYS } from "@/lib/podcast-cache";
 
 const SPOTIFY_GREEN = "#1DB954";
@@ -35,11 +35,11 @@ const SHOW_ID  = "46SZ8iPqkz18HxVHQHnu7P";
 const SHOW_URL = `https://open.spotify.com/show/${SHOW_ID}`;
 const SHOW_EMBED = `https://open.spotify.com/embed/show/${SHOW_ID}?utm_source=generator`;
 
-type Episode = { id: string; name: string; duration_ms: number; release_date: string; thumbnail: string };
+type Episode = { id: string; name: string; duration_ms: number; release_date: string; thumbnail: string; audioUrl?: string };
 
 export function HomePodcastBlock() {
   const C = useColors();
-  const { language, isRTL } = useTheme();
+  const { language, isRTL, isDark } = useTheme();
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
 
@@ -47,6 +47,7 @@ export function HomePodcastBlock() {
   // length is only used to distinguish the empty/failed state from real content.
   const [hasEpisodes, setHasEpisodes] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeEp, setActiveEp] = useState<Episode | null>(null);
   const [loading, setLoading]   = useState(true);
   const [failed, setFailed]     = useState(false);
 
@@ -64,14 +65,17 @@ export function HomePodcastBlock() {
       const eps = ((j.episodes ?? []) as Episode[]).slice(0, 1);
       if (cancelled) return;
       setHasEpisodes(eps.length > 0);
-      if (eps.length > 0) setActiveId((cur) => (cur === eps[0].id ? cur : eps[0].id));
+      if (eps.length > 0) {
+        setActiveEp(eps[0]);
+        setActiveId((cur) => (cur === eps[0].id ? cur : eps[0].id));
+      }
     };
     (async () => {
       // 1) instant paint from the shared cache
       const cached = await getCachedJson<any>(PODCAST_KEYS.spotify);
       if (cached) { apply(cached); if (!cancelled) setLoading(false); }
       // 2) revalidate
-      const fresh = await fetchAndCacheJson<any>(WEB_BASE + "/api/podcast/spotify", PODCAST_KEYS.spotify);
+      const fresh = await fetchAndCacheJson<any>(WEB_BASE + "/api/podcast/episodes", PODCAST_KEYS.spotify);
       if (cancelled) return;
       if (fresh) { apply(fresh); setLoading(false); }
       else if (!cached) { setFailed(true); setLoading(false); }
@@ -84,8 +88,8 @@ export function HomePodcastBlock() {
 
       {/* Header row */}
       <View style={[s.row, isRTL && s.rowRTL, { alignItems: "center", padding: Spacing[4], paddingBottom: 0 }]}>
-        <View style={[s.spotifyDot, { backgroundColor: SPOTIFY_GREEN }]} />
-        <Text style={[s.eyebrow, { color: SPOTIFY_GREEN, fontFamily: ff("700") }]}>SPOTIFY</Text>
+        <View style={[s.spotifyDot, { backgroundColor: C.primary }]} />
+        <Text style={[s.eyebrow, { color: C.primary, fontFamily: ff("700") }]}>{isAr ? "بودكاست" : "PODCAST"}</Text>
         <Pressable
           onPress={() => { Haptics.selectionAsync(); router.push("/tabs/podcast"); }}
           style={{ marginInlineStart: "auto", flexDirection: isRTL ? "row-reverse" : "row", alignItems: "center", gap: 4 }}
@@ -118,14 +122,15 @@ export function HomePodcastBlock() {
         <View style={[s.player, { borderColor: C.border.subtle }]}>
           <WebView
             key={activeId || "show"}
-            source={
-              activeId
-                ? { html: spotifyEpisodeHtml(activeId, false), baseUrl: SPOTIFY_BASE_URL }
-                : { uri: SHOW_EMBED }
-            }
+            /* In-house premium player over the episode's direct MP3 (RSS) — no
+               Spotify iframe, so no "Follow"/"Get the Spotify app" marketing. */
+            source={{
+              html: audioPlayerHtml(activeEp?.audioUrl ?? "", activeEp?.name ?? "", { isAr, dark: isDark }),
+              baseUrl: SPOTIFY_BASE_URL,
+            }}
             originWhitelist={["*"]}
             onShouldStartLoadWithRequest={webviewAllowRequest}
-            style={{ height: 152, backgroundColor: "transparent" }}
+            style={{ height: 110, backgroundColor: "transparent" }}
             allowsInlineMediaPlayback
             mediaPlaybackRequiresUserAction={false}
             setSupportMultipleWindows={false}

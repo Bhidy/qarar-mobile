@@ -24,6 +24,7 @@ import { visibleCallUpdates, effectiveStatus } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
 import { fontFamilyFor } from "@/lib/typography";
 import { getRealizedReturn } from "@/lib/performance";
+import { displayAuthors } from "@/lib/byline";
 import { RichText, looksLikeHtml } from "@/lib/rich-text";
 
 export default function FundamentalScreen() {
@@ -191,7 +192,7 @@ export default function FundamentalScreen() {
                       {isAr && (item as any).titleAr ? (item as any).titleAr : item.title}
                     </Text>
                     <View style={[styles.articleMeta, isRTL && styles.rowRTL]}>
-                      <Text style={[styles.articleAuthor, { color: C.text.muted, fontFamily: fontFamily("600") }]}>{item.author.join(", ")}</Text>
+                      <Text style={[styles.articleAuthor, { color: C.text.muted, fontFamily: fontFamily("600") }]}>{displayAuthors(item.author, isAr)}</Text>
                       <Text style={[styles.articleDate, { color: C.text.muted }]}>{formatDate(item.date)}</Text>
                     </View>
                   </View>
@@ -324,7 +325,9 @@ function FeaturedArticle({
               <SignalBadge signal={featured.tag} size="sm" />
             </View>
           ) : null}
-          <Text style={[styles.featuredTitle, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]} numberOfLines={2}>
+          {/* AR: lineHeight 30 (Cairo needs ≥1.45×; 24 caused wrapped lines to OVERLAP)
+              and letterSpacing 0 (negative tracking breaks connected Arabic glyphs). */}
+          <Text style={[styles.featuredTitle, { color: C.text.primary, fontFamily: fontFamily("800") }, isAr && { lineHeight: 30, letterSpacing: 0 }, isRTL && styles.textRight]} numberOfLines={2}>
             {title}
           </Text>
           {subtitle ? (

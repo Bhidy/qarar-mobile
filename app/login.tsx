@@ -39,6 +39,7 @@ import { Spacing, Typography, Radius } from "@/constants/theme";
 import { fontFamilyFor, displayFontFor } from "@/lib/typography";
 import { useAuth } from "@/context/AuthContext";
 import { SmartSignalsMark } from "@/components/shared/SmartSignalsMark";
+import { localizeAuthError } from "@/lib/auth-errors";
 
 // ── Design tokens (canonical, light theme) ─────────────────────────────────
 const BRAND = {
@@ -60,14 +61,13 @@ const BRAND = {
   redInk:         "#8A1F19",
 } as const;
 
-type Mode = "signin" | "signup" | "forgot" | "otp";
+type Mode = "signin" | "signup" | "forgot";
 
 interface FormErrors {
   email?: string;
   password?: string;
   confirmPassword?: string;
   fullName?: string;
-  code?: string;
   terms?: string;
   general?: string;
 }
@@ -209,7 +209,7 @@ export default function LoginScreen() {
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
   const df = (w: "400" | "600" | "700" | "800") => displayFontFor(isAr, w);
-  const { signInWithPassword, signUp, sendOtp, verifyOtp, resetPassword, user } = useAuth();
+  const { signInWithPassword, signUp, resetPassword, user } = useAuth();
 
   const T = (en: string, ar: string) => (isAr ? ar : en);
 
@@ -219,9 +219,6 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [code, setCode] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCountdown, setOtpCountdown] = useState(0);
   const [busy, setBusy] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -243,14 +240,6 @@ export default function LoginScreen() {
 
   // ── Effects ────────────────────────────────────────────────────────────
   useEffect(() => { initBiometric(); }, []);
-  useEffect(() => {
-    if (!otpSent || otpCountdown <= 0) return;
-    const id = setInterval(() => {
-      setOtpCountdown((n) => (n <= 1 ? (clearInterval(id), 0) : n - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [otpSent, otpCountdown]);
-
   // When the switcher width is known, animate the pill to the current mode's
   // position. Tab order is reversed in AR (Sign in on the right, Register on
   // the left), so the pill's "left" offset has to follow whichever physical
@@ -316,7 +305,6 @@ export default function LoginScreen() {
     // both mode AND isAr), so all this needs to do is move state.
     setMode(m);
     setErrors({});
-    setOtpSent(false);
     setForgotSuccess(false);
   }
 
@@ -339,11 +327,6 @@ export default function LoginScreen() {
       else if (confirmPassword !== password) errs.confirmPassword = T("Passwords do not match.", "كلمتا المرور غير متطابقتين.");
       if (!termsAccepted) errs.terms = T("Accept the Terms and Privacy Policy.", "اقبل الشروط وسياسة الخصوصية.");
     }
-    if (mode === "otp" && otpSent) {
-      if (!code.trim() || !/^\d{6}$/.test(code.trim())) {
-        errs.code = T("Enter the 6-digit code.", "أدخل الرمز المكوّن من 6 أرقام.");
-      }
-    }
     return errs;
   }
 
@@ -356,33 +339,21 @@ export default function LoginScreen() {
     try {
       if (mode === "signin") {
         const r = await signInWithPassword(email.trim(), password);
-        if (r.error) { setErrors({ general: r.error }); return; }
+        if (r.error) { setErrors({ general: localizeAuthError(r.error, isAr) }); return; }
         if (hasBiometric && !biometricEnabled) setTimeout(offerBiometric, 600);
         await AsyncStorage.setItem("@onboarding_done", "true");
         router.replace("/tabs");
       } else if (mode === "signup") {
         const su = await signUp(email.trim(), password, fullName.trim());
-        if (su.error) { setErrors({ general: su.error }); return; }
+        if (su.error) { setErrors({ general: localizeAuthError(su.error, isAr) }); return; }
         const r = await signInWithPassword(email.trim(), password);
-        if (r.error) { setErrors({ general: r.error }); return; }
+        if (r.error) { setErrors({ general: localizeAuthError(r.error, isAr) }); return; }
         if (hasBiometric) setTimeout(offerBiometric, 600);
         await AsyncStorage.setItem("@onboarding_done", "true");
         router.replace("/tabs");
-      } else if (mode === "otp") {
-        if (!otpSent) {
-          const r = await sendOtp(email.trim());
-          if (r.error) { setErrors({ general: r.error }); return; }
-          setOtpSent(true);
-          setOtpCountdown(60);
-        } else {
-          const r = await verifyOtp(email.trim(), code.trim());
-          if (r.error) { setErrors({ general: r.error }); return; }
-          await AsyncStorage.setItem("@onboarding_done", "true");
-          router.replace("/tabs");
-        }
       } else if (mode === "forgot") {
         const r = await resetPassword(email.trim());
-        if (r.error) { setErrors({ general: r.error }); return; }
+        if (r.error) { setErrors({ general: localizeAuthError(r.error, isAr) }); return; }
         setForgotSuccess(true);
       }
     } finally {
@@ -390,37 +361,23 @@ export default function LoginScreen() {
     }
   }
 
-  async function handleResend() {
-    Haptics.selectionAsync();
-    setBusy(true);
-    try {
-      const r = await sendOtp(email.trim());
-      if (r.error) { setErrors({ general: r.error }); return; }
-      setOtpCountdown(60);
-    } finally { setBusy(false); }
-  }
-
   const ctaLabel = busy
     ? T("Securing your session…", "جارٍ تأمين جلستك…")
     : mode === "signin"  ? T("Sign in", "تسجيل الدخول")
     : mode === "signup"  ? T("Create account", "إنشاء حساب")
-    : mode === "forgot"  ? T("Send reset link", "إرسال رابط إعادة التعيين")
-    : otpSent            ? T("Verify code", "تأكيد الرمز")
-    : T("Email me a code", "أرسل لي رمزًا");
+    : T("Send reset link", "إرسال رابط إعادة التعيين");
 
   const showModeSwitcher = mode === "signin" || mode === "signup";
 
   const heroHeadline =
     mode === "signin"  ? (isAr ? "مرحبًا بعودتك" : "Welcome back")
   : mode === "signup"  ? (isAr ? "أنشئ حسابك" : "Create your account")
-  : mode === "forgot"  ? (isAr ? "إعادة تعيين كلمة المرور" : "Reset password")
-  :                      (isAr ? "الدخول برمز" : "Sign in with a code");
+  :                      (isAr ? "إعادة تعيين كلمة المرور" : "Reset password");
 
   const heroSub =
     mode === "signin"  ? (isAr ? "سجّل الدخول للوصول إلى الأبحاث والتنبيهات وأدوات المتابعة." : "Sign in to access research, alerts, and portfolio tools.")
   : mode === "signup"  ? (isAr ? "أنشئ حسابك مرة واحدة وابدأ تجربة Smart Signals الكاملة." : "Create your account once and unlock the full Smart Signals experience.")
-  : mode === "forgot"  ? (isAr ? "سنرسل رابط إعادة التعيين إلى بريدك المسجل." : "We'll send a reset link to your registered email.")
-  :                      (isAr ? "سنرسل رمزًا من 6 أرقام إلى بريدك — دون كلمة مرور." : "We'll email you a 6-digit code — no password needed.");
+  :                      (isAr ? "سنرسل رابط إعادة التعيين إلى بريدك المسجل." : "We'll send a reset link to your registered email.");
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
@@ -674,32 +631,6 @@ export default function LoginScreen() {
                   />
                 )}
 
-                {mode === "otp" && otpSent && (
-                  <View>
-                    <Field
-                      icon="keypad-outline"
-                      label={T("6-digit code", "الرمز المكوّن من 6 أرقام")}
-                      value={code}
-                      onChangeText={(v) => { setCode(v.replace(/\D/g, "").slice(0, 6)); if (errors.code) setErrors((e) => ({ ...e, code: undefined })); }}
-                      error={errors.code}
-                      ff={ff} isAr={isAr} keyboardType="number-pad" maxLength={6} mono
-                    />
-                    <View style={s.resendRow}>
-                      {otpCountdown > 0 ? (
-                        <Text style={[s.resendText, { color: BRAND.muted, fontFamily: ff("500") }]}>
-                          {T(`Resend code in ${otpCountdown}s`, `إعادة الإرسال خلال ${otpCountdown} ث`)}
-                        </Text>
-                      ) : (
-                        <Pressable onPress={handleResend} hitSlop={8}>
-                          <Text style={[s.resendText, { color: BRAND.primary, fontFamily: ff("800") }]}>
-                            {T("Resend code", "إعادة إرسال الرمز")}
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
-                  </View>
-                )}
-
                 {mode === "signup" && (
                   <Pressable
                     onPress={() => { setTermsAccepted((v) => !v); if (errors.terms) setErrors((e) => ({ ...e, terms: undefined })); }}
@@ -785,22 +716,10 @@ export default function LoginScreen() {
                       </Pressable>
                     )}
 
-                    <View style={s.dividerRow}>
-                      <View style={s.dividerLine} />
-                      <Text style={[s.dividerLabel, { fontFamily: ff("700") }]}>{T("or", "أو")}</Text>
-                      <View style={s.dividerLine} />
-                    </View>
-
-                    <Pressable onPress={() => switchMode("otp")} style={s.ghostBtn} hitSlop={6}>
-                      <Ionicons name="mail-unread-outline" size={16} color={BRAND.primaryInk} />
-                      <Text style={[s.ghostText, { fontFamily: ff("700") }]}>
-                        {T("Email me a sign-in code", "أرسل لي رمز دخول")}
-                      </Text>
-                    </Pressable>
                   </>
                 )}
 
-                {(mode === "otp" || mode === "forgot") && (
+                {mode === "forgot" && (
                   <Pressable onPress={() => switchMode("signin")} style={s.linkRow} hitSlop={8}>
                     <Ionicons name={isRTL ? "chevron-forward" : "chevron-back"} size={14} color={BRAND.muted} />
                     <Text style={[s.linkText, { color: BRAND.ink2, fontFamily: ff("700") }]}>

@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useColors, useTheme } from "@/context/ThemeContext";
+import { displayAuthors } from "@/lib/byline";
 import { Radius, Typography, Spacing } from "@/constants/theme";
 import { SignalBadge } from "./SignalBadge";
 import { Ionicons } from "@expo/vector-icons";
@@ -115,7 +116,7 @@ export function ContentCard({ card, compact = false }: ContentCardProps) {
             </Text>
           )}
           <View style={[styles.meta, isRTL && styles.metaRTL]}>
-            <Text style={[styles.author, { color: C.text.muted }]}>{card.author.join(", ")}</Text>
+            <Text style={[styles.author, { color: C.text.muted }]}>{displayAuthors(card.author, isAr)}</Text>
             <Text style={[styles.date, { color: C.text.muted }]}>{formatDate(card.date)}</Text>
           </View>
         </View>

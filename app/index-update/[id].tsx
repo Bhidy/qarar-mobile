@@ -29,7 +29,13 @@ function htmlToParagraphs(html?: string | null): string[] {
     .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&rsquo;|&lsquo;/gi, "'")
-    .replace(/&ldquo;|&rdquo;/gi, '"');
+    .replace(/&ldquo;|&rdquo;/gi, '"')
+    // Dashes/ellipsis + numeric entities — a raw "&ndash;" was rendering as
+    // literal text ("ndash; 1&") inside Arabic news bodies.
+    .replace(/&ndash;/gi, "\u2013")
+    .replace(/&mdash;/gi, "\u2014")
+    .replace(/&hellip;/gi, "\u2026")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)));
   return text.split(/\n+/).map((p) => p.trim()).filter(Boolean);
 }
 

@@ -13,16 +13,9 @@ import { NewsCover } from "@/components/shared/NewsCover";
 import { AnnouncementsSection } from "@/components/news/AnnouncementsSection";
 import { ScreenHeader } from "@/components/shared/ScreenHeader";
 
-type NewsTab = "market" | "announcements";
+import { CATEGORY_LABEL } from "@/lib/news-categories";
 
-const CATEGORY_LABEL: Record<string, { en: string; ar: string }> = {
-  Earnings:  { en: "Earnings",  ar: "أرباح" },
-  Corporate: { en: "Corporate", ar: "شركات" },
-  Macro:     { en: "Macro",     ar: "اقتصاد كلي" },
-  Global:    { en: "Global",    ar: "عالمي" },
-  Market:    { en: "Market",    ar: "سوق" },
-  IPO:       { en: "IPO",       ar: "اكتتاب" },
-};
+type NewsTab = "market" | "announcements";
 
 const isArabicText = (s?: string | null) => !!s && /[؀-ۿ]/.test(s);
 

@@ -1,5 +1,6 @@
 import { ScrollView, View, StyleSheet, Pressable } from "react-native";
 import { formatDate } from "@/lib/format-date";
+import { displayAuthors } from "@/lib/byline";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -100,7 +101,7 @@ export default function AllReleasesScreen() {
                   )}
                   <View style={[styles.meta, isRTL && styles.rowRTL]}>
                     <Text style={[styles.metaText, { color: C.text.muted, fontFamily: ff("600") }]} numberOfLines={1}>
-                      {Array.isArray(card.author) ? card.author.join(", ") : card.author}
+                      {displayAuthors(card.author as any, isAr)}
                     </Text>
                     <Text style={[styles.metaText, { color: C.text.muted, fontFamily: ff("400") }]}>{formatDate(card.date)}</Text>
                   </View>

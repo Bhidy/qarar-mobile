@@ -15,7 +15,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const PODCAST_KEYS = {
-  spotify: "@podcast_spotify_v1",
+  spotify: "@podcast_spotify_v1_rss1",
   yt1: "@podcast_yt1_v1",
   yt2: "@podcast_yt2_v1",
 } as const;

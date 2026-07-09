@@ -36,7 +36,7 @@ import { WEB_BASE } from "@/constants/site";
 import { useViewMore } from "@/hooks/useViewMore";
 import { ViewMoreButton } from "@/components/shared/ViewMoreButton";
 import { ScreenHeader } from "@/components/shared/ScreenHeader";
-import { spotifyEpisodeHtml, webviewAllowRequest, SPOTIFY_BASE_URL } from "@/lib/embeds";
+import { audioPlayerHtml, webviewAllowRequest, SPOTIFY_BASE_URL } from "@/lib/embeds";
 import { getCachedJson, fetchAndCacheJson, PODCAST_KEYS } from "@/lib/podcast-cache";
 
 const SPOTIFY_GREEN = "#1DB954";
@@ -74,7 +74,7 @@ function relDate(iso: string, isAr: boolean) {
 
 export default function PodcastScreen() {
   const C = useColors();
-  const { language, isRTL } = useTheme();
+  const { language, isRTL, isDark } = useTheme();
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
 
@@ -91,7 +91,8 @@ export default function PodcastScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const SPO_URL = `${WEB_BASE}/api/podcast/spotify`;
+  // RSS-backed route: direct MP3s → in-house premium player (no Spotify chrome).
+  const SPO_URL = `${WEB_BASE}/api/podcast/episodes`;
   const YT1_URL = `${WEB_BASE}/api/podcast/youtube`;
   const YT2_URL = `${WEB_BASE}/api/podcast/youtube?playlist=${YT_PLAYLIST_2_ID}`;
 
@@ -184,14 +185,15 @@ export default function PodcastScreen() {
                   <View style={[s.playerCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}>
                     <WebView
                       key={`${activeEp?.id || "show"}-${epAutoplay ? "p" : "s"}`}
-                      source={
-                        activeEp
-                          ? { html: spotifyEpisodeHtml(activeEp.id, epAutoplay), baseUrl: SPOTIFY_BASE_URL }
-                          : { uri: SHOW_EMBED }
-                      }
+                      /* In-house premium player over the episode's direct MP3 (RSS) —
+                         no Spotify iframe, no "Follow"/"Get the Spotify app" cards. */
+                      source={{
+                        html: audioPlayerHtml((activeEp as any)?.audioUrl ?? "", activeEp?.name ?? "", { isAr, dark: isDark, autoplay: epAutoplay }),
+                        baseUrl: SPOTIFY_BASE_URL,
+                      }}
                       originWhitelist={["*"]}
                       onShouldStartLoadWithRequest={webviewAllowRequest}
-                      style={{ height: 152, backgroundColor: "transparent" }}
+                      style={{ height: 110, backgroundColor: "transparent" }}
                       allowsInlineMediaPlayback
                       mediaPlaybackRequiresUserAction={false}
                       setSupportMultipleWindows={false}

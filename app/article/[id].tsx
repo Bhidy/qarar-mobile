@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { formatDate } from "@/lib/format-date";
+import { displayAuthors } from "@/lib/byline";
 import { ScrollView, View, StyleSheet, Pressable, Image, Modal, Share } from "react-native";
 import { WebView } from "react-native-webview";
 import { Text } from "@/components/shared/AppText";
@@ -75,7 +76,7 @@ export default function ArticleDetail() {
 
   // Null-safe author derivation — never crash on missing/empty author
   const authors = (article.author ?? []).filter(Boolean);
-  const authorName = authors.join(" & ") || "Smart Signals Research";
+  const authorName = displayAuthors(authors, isAr) || (isAr ? "فريق أبحاث Smart Signals" : "Smart Signals Research");
   const authorInitial = (authorName.trim().charAt(0) || "S").toUpperCase();
 
   const related = all.filter(a => a.id !== article.id && (a.ticker === article.ticker || a.section === article.section)).slice(0, 3);
