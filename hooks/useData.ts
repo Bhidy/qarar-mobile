@@ -210,6 +210,9 @@ function toArticle(row: any): Article {
     date:       row.date,
     tag:        row.tag ?? undefined,
     ticker:     primaryTicker(row.ticker),
+    // Editorial "Featured" flag → Fundamental hero (ticker-optional). Was dropped here,
+    // which silently disabled the admin toggle in the app.
+    featured:   row.featured ?? undefined,
     coverImage: row.coverImage ?? row.coverimage ?? undefined,
     market:     row.market ?? undefined,
     // Interactive chart (Technical Reports) — captured image + live chart config.

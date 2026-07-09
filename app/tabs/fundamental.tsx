@@ -53,7 +53,7 @@ export default function FundamentalScreen() {
   const fundamentalData = isUsa ? USA_FUNDAMENTAL : isSaudi ? SAUDI_FUNDAMENTAL : FUNDAMENTAL_CALLS;
 
   const signalFiltered = fundamentalData.filter(c =>
-    activeFilter === "all" ? true : c.signal.toLowerCase() === activeFilter
+    activeFilter === "all" ? true : String(c.signal ?? "").toLowerCase() === activeFilter
   );
   // Active (actionable) vs closed (track-record) — a closed call must never be
   // shown as a live "Active" call with live-looking "Remaining" upside.
@@ -162,47 +162,6 @@ export default function FundamentalScreen() {
           C={C}
         />
 
-        {/* Fundamental Articles — analyst research prose (parity with web FundamentalArticles). */}
-        {fundArticles.length > 0 && (
-          <View style={{ marginTop: Spacing[6] }}>
-            <View style={styles.sectionPad}>
-              <Text style={[styles.sectionTitle, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>
-                {isAr ? "المقالات الأساسية" : "Fundamental Articles"}
-              </Text>
-              <Text style={[styles.sectionSub, { color: C.text.muted, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}>
-                {isAr ? "تحليلات معمّقة للشركات والنتائج والتقييم من محللينا." : "Company deep-dives, earnings and valuation notes from our analysts."}
-              </Text>
-            </View>
-            <FlatList
-              horizontal
-              inverted={isAr}
-              data={fundArticles}
-              keyExtractor={i => i.id}
-              renderItem={({ item }) => (
-                <Pressable
-                  style={[styles.articleCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}
-                  onPress={() => router.push({ pathname: "/fundamental-article/[id]", params: { id: item.id } })}
-                >
-                  <View style={[styles.articleThumb, { backgroundColor: C.bg.elevated }]}>
-                    <ArticleCover ticker={item.ticker} />
-                  </View>
-                  <View style={styles.articleBody}>
-                    <Text style={[styles.articleTitle, { color: C.text.primary, fontFamily: fontFamily("700") }]} numberOfLines={2}>
-                      {isAr && item.titleAr ? item.titleAr : item.title}
-                    </Text>
-                    <View style={[styles.articleMeta, isRTL && styles.rowRTL]}>
-                      <Text style={[styles.articleAuthor, { color: C.text.muted, fontFamily: fontFamily("600") }]} numberOfLines={1}>{item.analyst ?? ""}</Text>
-                      <Text style={[styles.articleDate, { color: C.text.muted }]}>{item.date ? formatDate(item.date) : ""}</Text>
-                    </View>
-                  </View>
-                </Pressable>
-              )}
-              contentContainerStyle={styles.hList}
-              showsHorizontalScrollIndicator={false}
-            />
-          </View>
-        )}
-
         {/* Fundamental Reports — parity with web LatestContent (always shown when items exist). */}
         {recentContent.length > 0 && (
           <View style={{ marginTop: Spacing[6] }}>
@@ -245,6 +204,48 @@ export default function FundamentalScreen() {
           </View>
         )}
 
+        {/* Fundamental Articles — analyst research prose (parity with web FundamentalArticles).
+            Placed BELOW Fundamental Reports per product order (mirrors web page). */}
+        {fundArticles.length > 0 && (
+          <View style={{ marginTop: Spacing[6] }}>
+            <View style={styles.sectionPad}>
+              <Text style={[styles.sectionTitle, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>
+                {isAr ? "المقالات الأساسية" : "Fundamental Articles"}
+              </Text>
+              <Text style={[styles.sectionSub, { color: C.text.muted, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}>
+                {isAr ? "تحليلات معمّقة للشركات والنتائج والتقييم من محللينا." : "Company deep-dives, earnings and valuation notes from our analysts."}
+              </Text>
+            </View>
+            <FlatList
+              horizontal
+              inverted={isAr}
+              data={fundArticles}
+              keyExtractor={i => i.id}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={[styles.articleCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}
+                  onPress={() => router.push({ pathname: "/fundamental-article/[id]", params: { id: item.id } })}
+                >
+                  <View style={[styles.articleThumb, { backgroundColor: C.bg.elevated }]}>
+                    <ArticleCover ticker={item.ticker} />
+                  </View>
+                  <View style={styles.articleBody}>
+                    <Text style={[styles.articleTitle, { color: C.text.primary, fontFamily: fontFamily("700") }]} numberOfLines={2}>
+                      {isAr && item.titleAr ? item.titleAr : item.title}
+                    </Text>
+                    <View style={[styles.articleMeta, isRTL && styles.rowRTL]}>
+                      <Text style={[styles.articleAuthor, { color: C.text.muted, fontFamily: fontFamily("600") }]} numberOfLines={1}>{item.analyst ?? ""}</Text>
+                      <Text style={[styles.articleDate, { color: C.text.muted }]}>{item.date ? formatDate(item.date) : ""}</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              )}
+              contentContainerStyle={styles.hList}
+              showsHorizontalScrollIndicator={false}
+            />
+          </View>
+        )}
+
         <Disclaimer />
         <View style={{ height: TAB_BAR_CLEARANCE }} />
       </ScrollView>
@@ -269,12 +270,17 @@ function FeaturedArticle({
   fontFamily: (w: "400"|"600"|"700"|"800") => string | undefined;
   C: ReturnType<typeof useColors>;
 }) {
-  // Same filter rule as web: section=fundamental, ticker present, market-aware.
+  // Same rule as web: section=fundamental, market-aware — but ticker is OPTIONAL so a
+  // macro / economic report (no single stock) can be the flagship. The admin "Featured"
+  // toggle wins; otherwise fall back to legacy (Invest-tagged, then newest ticker'd).
   const pool = articles.filter(a =>
-    a?.section === "fundamental" && !!a?.ticker &&
+    a?.section === "fundamental" &&
     (a?.market ? a.market === market || a.market === "both" : market === "egypt"),
   );
-  const featured = pool.find(a => a.tag === "Invest") ?? pool[0];
+  const featured =
+    pool.find(a => a.featured) ??
+    pool.find(a => a.ticker && a.tag === "Invest") ??
+    pool.find(a => a.ticker);
   if (!featured) return null;
 
   const match = calls.find(c => c?.ticker === featured.ticker);

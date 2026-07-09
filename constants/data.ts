@@ -25,6 +25,8 @@ export interface Article {
   date: string;
   tag?: string;
   ticker?: string;
+  /** Editorial "Featured" flag — promotes a fundamental report to the hero (ticker-optional). */
+  featured?: boolean;
   coverImage?: string;
   section: "fundamental" | "technical" | "insights" | "macro" | "live";
   market?: "egypt" | "saudi" | "usa" | "both";
