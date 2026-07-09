@@ -5,7 +5,6 @@
 import { ScrollView, View, StyleSheet, Pressable, FlatList, RefreshControl, Image } from "react-native";
 import { formatDate } from "@/lib/format-date";
 import { Text } from "@/components/shared/AppText";
-import { Disclaimer } from "@/components/shared/Disclaimer";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -388,7 +387,6 @@ export default function TechnicalScreen() {
           </View>
         )}
 
-        <Disclaimer />
         <View style={{ height: TAB_BAR_CLEARANCE }} />
       </ScrollView>
     </SafeAreaView>

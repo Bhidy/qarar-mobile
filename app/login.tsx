@@ -205,7 +205,7 @@ function Field({
 
 // ── Screen ─────────────────────────────────────────────────────────────────
 export default function LoginScreen() {
-  const { language, isRTL } = useTheme();
+  const { language, isRTL, setLanguage } = useTheme();
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
   const df = (w: "400" | "600" | "700" | "800") => displayFontFor(isAr, w);
@@ -464,19 +464,32 @@ export default function LoginScreen() {
             <SafeAreaView edges={["top"]}>
               <Animated.View
                 entering={FadeIn.duration(420)}
-                style={[s.brandRow, { flexDirection: isAr ? "row-reverse" : "row" }]}
+                style={[s.brandRow, { flexDirection: isAr ? "row-reverse" : "row", justifyContent: "space-between" }]}
               >
-                <View style={s.brandTile}>
-                  <SmartSignalsMark size={26} ink="#FFFFFF" accent="#9DB6FF" />
+                <View style={{ flexDirection: isAr ? "row-reverse" : "row", alignItems: "center", gap: 12 }}>
+                  <View style={s.brandTile}>
+                    <SmartSignalsMark size={26} ink="#FFFFFF" accent="#9DB6FF" />
+                  </View>
+                  <View>
+                    <Text style={[s.brandWord, { fontFamily: df("800"), textAlign: isAr ? "right" : "left" }]}>
+                      Smart Signals
+                    </Text>
+                    <Text style={[s.brandSub, { fontFamily: ff("600"), textAlign: isAr ? "right" : "left" }]}>
+                      {T("Powered by Mubasher", "مقدم من خلال مباشر")}
+                    </Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={[s.brandWord, { fontFamily: df("800"), textAlign: isAr ? "right" : "left" }]}>
-                    Smart Signals
-                  </Text>
-                  <Text style={[s.brandSub, { fontFamily: ff("600"), textAlign: isAr ? "right" : "left" }]}>
-                    {T("Powered by Mubasher", "مقدم من خلال مباشر")}
-                  </Text>
-                </View>
+                {/* Language switch — glass pill, legible on the dark hero */}
+                <Pressable
+                  onPress={() => { Haptics.selectionAsync(); setLanguage(isAr ? "en" : "ar"); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={isAr ? "Switch to English" : "التبديل إلى العربية"}
+                  style={s.langToggle}
+                  hitSlop={8}
+                >
+                  <Ionicons name="language" size={14} color="rgba(255,255,255,0.92)" />
+                  <Text style={[s.langToggleText, { fontFamily: df("700") }]}>{isAr ? "EN" : "عربي"}</Text>
+                </Pressable>
               </Animated.View>
 
               <Animated.View entering={FadeInDown.duration(520).delay(120)} style={s.heroCopy}>
@@ -841,6 +854,18 @@ const s = StyleSheet.create({
     paddingHorizontal: Spacing[5],
     paddingTop: Spacing[2],
   },
+  langToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  langToggleText: { color: "rgba(255,255,255,0.92)", fontSize: 12, letterSpacing: 0.2 },
   brandTile: {
     width: 44, height: 44, borderRadius: 14,
     alignItems: "center", justifyContent: "center",

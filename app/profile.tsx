@@ -483,7 +483,7 @@ export default function ProfileScreen() {
           <PressRow icon="shield-checkmark-outline" label={t("profile.privacy")} C={C} rtl={rtl}
             onPress={() => Linking.openURL("https://mubashersignals.com/privacy")} />
           <PressRow icon="document-text-outline"    label={t("profile.terms")}   C={C} rtl={rtl}
-            onPress={() => Linking.openURL("https://mubashersignals.com/terms")} />
+            onPress={() => Linking.openURL(`https://mubashersignals.com/terms?lang=${rtl ? "ar" : "en"}`)} />
           <PressRow icon="help-circle-outline"      label={t("profile.support")} C={C} rtl={rtl}
             onPress={() => Linking.openURL("mailto:support@mubashersignals.com")} />
           <PressRow icon="log-out-outline"          label={t("profile.signOut")} C={C} danger last rtl={rtl}

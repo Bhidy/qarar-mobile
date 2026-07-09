@@ -85,6 +85,22 @@ GRADLE_VC=$(grep -m1 -E "versionCode [0-9]+" android/app/build.gradle | grep -oE
 [ "$VC" = "$GRADLE_VC" ] || fail "versionCode drift: app.json=$VC vs build.gradle=$GRADLE_VC — run scripts/release.sh stamp"
 ok "android versionCode consistent (app.json == build.gradle == $VC)"
 
+# iOS Info.plist MUST reference build-setting variables, not literals — a literal
+# CFBundleShortVersionString (e.g. 1.0.0) silently overrode the script's version
+# args and bounced build 95 twice (error 90062/90186). The native tree is gitignored
+# (CNG); when present on this build machine, enforce the binding. When absent it will
+# be generated from app.json (the version source of truth) at prebuild time.
+PLIST=ios/SmartSignals/Info.plist
+if [ -f "$PLIST" ]; then
+  grep -A1 "CFBundleShortVersionString</key>" "$PLIST" | grep -q 'MARKETING_VERSION' \
+    || fail "Info.plist CFBundleShortVersionString is a LITERAL — must be \$(MARKETING_VERSION) (build-95 version-bounce trap)"
+  grep -A1 "CFBundleVersion</key>" "$PLIST" | grep -q 'CURRENT_PROJECT_VERSION' \
+    || fail "Info.plist CFBundleVersion is a LITERAL — must be \$(CURRENT_PROJECT_VERSION)"
+  ok "Info.plist versions bind to build settings (MARKETING_VERSION / CURRENT_PROJECT_VERSION)"
+else
+  ok "native ios/ not generated (gitignored CNG) — versions will come from app.json at prebuild"
+fi
+
 # 4. Disk gate.
 FREE_GB=$(df -g / | awk 'NR==2 {print $4}')
 [ "$FREE_GB" -ge 20 ] || fail "only ${FREE_GB}GB free — from-source builds need ≥20GB"

@@ -1,7 +1,6 @@
 import { ScrollView, View, StyleSheet, FlatList, Pressable, Modal, TouchableOpacity, TouchableWithoutFeedback, RefreshControl, Image } from "react-native";
 import { formatDate } from "@/lib/format-date";
 import { Text } from "@/components/shared/AppText";
-import { Disclaimer } from "@/components/shared/Disclaimer";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -412,7 +411,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <Disclaimer />
         <View style={{ height: TAB_BAR_CLEARANCE }} />
       </ScrollView>
 

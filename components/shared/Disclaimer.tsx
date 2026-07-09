@@ -5,7 +5,9 @@ import { useColors, useTheme } from "@/context/ThemeContext";
 import { Spacing } from "@/constants/theme";
 import { fontFamilyFor } from "@/lib/typography";
 
-const TERMS_URL = "https://mubashersignals.com/terms";
+// Pass the language explicitly — the external browser has no app language state,
+// so ?lang= is the only reliable signal (else AR users get the English Terms).
+const termsUrl = (isAr: boolean) => `https://mubashersignals.com/terms?lang=${isAr ? "ar" : "en"}`;
 
 /**
  * Always-visible financial disclaimer for signal/recommendation surfaces
@@ -28,7 +30,7 @@ export function Disclaimer() {
         {isAr
           ? "لأغراض إعلامية فقط وليست توصية أو نصيحة استثمارية. الأداء السابق لا يضمن النتائج المستقبلية. الاستثمار ينطوي على مخاطر — استثمر على مسؤوليتك واستشر مستشارًا مرخّصًا. "
           : "For information only — not investment advice or a recommendation. Past performance does not guarantee future results. Investing involves risk; invest at your own responsibility and consult a licensed advisor. "}
-        <Text onPress={() => Linking.openURL(TERMS_URL)} style={{ color: C.primary, fontFamily: ff("700") }}>
+        <Text onPress={() => Linking.openURL(termsUrl(isAr))} style={{ color: C.primary, fontFamily: ff("700") }}>
           {isAr ? "الشروط الكاملة" : "Full terms"}
         </Text>
       </Text>
