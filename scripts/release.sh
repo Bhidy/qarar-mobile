@@ -28,15 +28,20 @@ ok()   { echo "   ✓ $1"; }
 fail() { echo "   ✗ $1"; exit 1; }
 
 stamp() {
-  local IOS="${1:?stamp needs <iosBuild>}" VC="${2:?stamp needs <androidVersionCode>}"
+  local IOS="${1:?stamp needs <iosBuild>}" VC="${2:?stamp needs <androidVersionCode>}" VER="${3:-}"
   # Dual-stamp so bare (committed android/) and CNG (prebuild) modes agree.
+  # Optional 3rd arg bumps the MARKETING version (expo.version) — REQUIRED after an
+  # App Store approval closes the train (error 90062/90186: 1.0.0 went
+  # READY_FOR_SALE and bounced the next 1.0.0 upload).
   node -e '
     const fs=require("fs");const p="app.json";const j=JSON.parse(fs.readFileSync(p,"utf8"));
     j.expo.ios.buildNumber=String(process.argv[1]); j.expo.android.versionCode=Number(process.argv[2]);
+    if(process.argv[3]) j.expo.version=process.argv[3];
     fs.writeFileSync(p,JSON.stringify(j,null,2)+"\n");
-  ' "$IOS" "$VC"
+  ' "$IOS" "$VC" "$VER"
   sed -i '' -E "s/versionCode [0-9]+/versionCode $VC/" android/app/build.gradle
-  ok "stamped app.json (ios=$IOS, vc=$VC) + android/app/build.gradle (vc=$VC)"
+  [ -n "$VER" ] && sed -i '' -E "s/versionName \"[0-9.]+\"/versionName \"$VER\"/" android/app/build.gradle
+  ok "stamped app.json (ios=$IOS, vc=$VC${VER:+, version=$VER}) + android/app/build.gradle"
   echo "   → commit this stamp before building (preflight enforces a clean tree)"
 }
 
@@ -72,7 +77,7 @@ release_android() {
 }
 
 case "$CMD" in
-  stamp)   stamp "${2:-}" "${3:-}";;
+  stamp)   stamp "${2:-}" "${3:-}" "${4:-}";;
   ios)     release_ios;;
   android) release_android;;
   both)    # Parallel per mobile-build-rules (M-series, plenty of disk).

@@ -47,7 +47,7 @@ ASC_KEY_ID="53QD83W9UK"
 ASC_ISSUER_ID="a3879256-fee1-4421-8369-9206ad76ee1c"
 ASC_KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
 [ -f "$ASC_KEY_PATH" ] || fail "ASC key missing: $ASC_KEY_PATH"
-NEXT_IOS=$(node -e '
+ASC_OUT=$(node -e '
 const crypto=require("crypto"),fs=require("fs");
 const KEY_ID=process.argv[1],ISSUER=process.argv[2],KEY=fs.readFileSync(process.argv[3],"utf8");
 const b64=o=>Buffer.from(JSON.stringify(o)).toString("base64url");
@@ -61,10 +61,22 @@ const bundle=require("./app.json").expo.ios.bundleIdentifier;
   const app=apps.data&&apps.data[0]; if(!app){console.error("app not found");process.exit(1);}
   const b=await fetch("https://api.appstoreconnect.apple.com/v1/builds?filter[app]="+app.id+"&sort=-version&limit=1",{headers:H}).then(r=>r.json());
   const latest=Number(b.data?.[0]?.attributes?.version||0);
-  console.log(latest+1);
+  // Closed-train tripwire: a version that reached the store (READY_FOR_SALE etc.)
+  // can never receive another build — the marketing version MUST be bumped.
+  // (Error class 90062/90186 — burned build 95 attempt #1 on 2026-07-10.)
+  const vs=await fetch("https://api.appstoreconnect.apple.com/v1/apps/"+app.id+"/appStoreVersions?limit=5",{headers:H}).then(r=>r.json());
+  const CLOSED=["READY_FOR_SALE","PENDING_APPLE_RELEASE","PENDING_DEVELOPER_RELEASE","IN_REVIEW","WAITING_FOR_REVIEW","PROCESSING_FOR_APP_STORE"];
+  const closed=(vs.data||[]).filter(v=>CLOSED.includes(v.attributes.appStoreState)).map(v=>v.attributes.versionString);
+  console.log(JSON.stringify({next:latest+1, closedTrains:closed}));
 })().catch(e=>{console.error(e.message);process.exit(1);});
-' "$ASC_KEY_ID" "$ASC_ISSUER_ID" "$ASC_KEY_PATH") || fail "ASC build-number query failed"
-ok "App Store Connect: next iOS build number = $NEXT_IOS (authoritative)"
+' "$ASC_KEY_ID" "$ASC_ISSUER_ID" "$ASC_KEY_PATH") || fail "ASC query failed"
+NEXT_IOS=$(node -e 'console.log(JSON.parse(process.argv[1]).next)' "$ASC_OUT")
+APP_VER=$(node -e 'console.log(require("./app.json").expo.version)')
+node -e '
+const {closedTrains}=JSON.parse(process.argv[1]);
+if(closedTrains.includes(process.argv[2])){console.error("version "+process.argv[2]+" train is CLOSED on the App Store ("+closedTrains.join(",")+") — bump expo.version: scripts/release.sh stamp <ios> <vc> <newVersion>");process.exit(1);}
+' "$ASC_OUT" "$APP_VER" || fail "marketing-version train closed"
+ok "App Store Connect: next iOS build number = $NEXT_IOS (authoritative); version $APP_VER train open"
 
 # Android: canonical local counter = app.json (Play rejects duplicates at submit,
 # and release.sh stamps both app.json AND build.gradle so bare/CNG modes agree).
