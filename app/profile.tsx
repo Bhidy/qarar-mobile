@@ -19,7 +19,6 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Spacing, Radius, Typography } from "@/constants/theme";
 import { fontFamilyFor, displayFontFor } from "@/lib/typography";
-import { MARKETPLACE_ENABLED } from "@/lib/marketplace/config";
 
 // ── Animated pressable row ────────────────────────────────────────────
 function PressRow({
@@ -471,10 +470,6 @@ export default function ProfileScreen() {
 
         {/* ── Account ─────────────────────────────────────────────────── */}
         <Section icon="person-circle-outline" title={t("profile.account")} C={C} rtl={rtl}>
-          {/* Analyst Marketplace — flag-gated demo entry (off by default). */}
-          {MARKETPLACE_ENABLED && (
-            <PressRow icon="pricetags-outline" label={language === 'ar' ? 'منصة المحللين' : 'Analyst Marketplace'} C={C} rtl={rtl} onPress={() => router.push('/marketplace')} />
-          )}
           {user !== null && (
             <>
               <PressRow icon="person-outline" label={t('profile.editProfile')}   C={C} rtl={rtl} onPress={() => router.push('/edit-profile')} />

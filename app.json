@@ -31,7 +31,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rumble.pro",
-      "buildNumber": "93",
+      "buildNumber": "94",
       "appleTeamId": "7F4FTZQ5H7",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
@@ -64,7 +64,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Smart Signals accesses your photo library only when you choose a profile picture.",
-          "cameraPermission": "Smart Signals uses the camera only when you choose to take a new profile photo.",
+          "cameraPermission": false,
           "microphonePermission": false
         }
       ],
@@ -86,7 +86,6 @@
       "expo-status-bar",
       "expo-splash-screen",
       "./plugins/with-fast-android.js",
-      "./plugins/with-ios-modular-headers.js",
       "./plugins/with-android-gradle-memory.js",
       [
         "expo-build-properties",

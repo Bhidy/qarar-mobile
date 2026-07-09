@@ -121,7 +121,8 @@ export const TAB_BAR_CLEARANCE = 112;
  * Matches the 8-variant signal system from the SmartSignals brand guide.
  */
 export function getSignalConfig(signal: string) {
-  const s = signal.toLowerCase().replace(/[\s_]/g, "-");
+  // Null-safe: never crash on a null/undefined signal from backend data.
+  const s = String(signal ?? "").toLowerCase().replace(/[\s_]/g, "-");
 
   if (s === "invest") {
     return {

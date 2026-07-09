@@ -27,7 +27,6 @@ import {
 import { ThemeProvider, useColors, useTheme } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { DataProvider } from "@/hooks/useData";
-import { MarketplaceProvider } from "@/context/MarketplaceContext";
 import { registerPushToken } from "@/lib/supabase";
 import { resolveNotificationPath } from "@/lib/notif-route";
 import { SplashAnimated } from "@/components/shared/SplashAnimated";
@@ -184,9 +183,6 @@ function AppLayout() {
         <Stack.Screen name="biometric" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />
         <Stack.Screen name="edit-profile" options={{ animation: "slide_from_right", headerShown: false }} />
-        {/* Analyst Marketplace — flag-gated demo group. Its own _layout redirects
-            to the app when MARKETPLACE_ENABLED is false, so nothing paid is reachable. */}
-        <Stack.Screen name="marketplace" options={{ animation: "slide_from_right" }} />
       </Stack>
     </SafeAreaProvider>
   );
@@ -286,7 +282,6 @@ export default function RootLayout() {
       <ThemeProvider>
         <AuthProvider>
           <DataProvider>
-            <MarketplaceProvider>
             <SplashContext.Provider value={!showSplash}>
               <AppLayout />
               {/* AppLock handles background re-lock only. Cold-start auth is handled
@@ -298,7 +293,6 @@ export default function RootLayout() {
               <OTAUpdates />
               {showSplash && <SplashAnimated onFinish={handleSplashFinish} />}
             </SplashContext.Provider>
-            </MarketplaceProvider>
           </DataProvider>
         </AuthProvider>
       </ThemeProvider>

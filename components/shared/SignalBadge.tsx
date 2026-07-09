@@ -20,11 +20,15 @@ const AR_SIGNAL: Record<string, string> = {
  * font-weight 800. Matches signal system in BRAND.md.
  */
 export function SignalBadge({ signal, size = "md" }: SignalBadgeProps) {
-  const config = getSignalConfig(signal);
+  // Null-safe: a single published row with a null/empty signal must never crash
+  // the 4 screens that render this badge (Home/Fundamental/Technical/stock).
+  const s = String(signal ?? "").trim();
+  const config = getSignalConfig(s);
   const { language } = useTheme();
   const isSm = size === "sm";
-  const en = signal.toUpperCase().replace("-", " ");
-  const key = signal.toLowerCase();
+  if (!s) return null; // no signal → render nothing (never a broken/empty pill)
+  const en = s.toUpperCase().replace("-", " ");
+  const key = s.toLowerCase();
   const label = language === "ar" ? (AR_SIGNAL[key] ?? AR_SIGNAL[key.replace("-", " ")] ?? en) : en;
 
   return (
@@ -39,7 +43,7 @@ export function SignalBadge({ signal, size = "md" }: SignalBadgeProps) {
       ]}
     >
       {/* Live pulse dot */}
-      {signal.toLowerCase() === "live" && (
+      {key === "live" && (
         <View style={styles.liveDot} />
       )}
       <Text

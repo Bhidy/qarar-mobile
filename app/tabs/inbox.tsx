@@ -38,7 +38,8 @@ function NotifItem({ item, C, isRTL, isAr, fontFamily, onRead }: {
   fontFamily: (w: "400"|"600"|"700"|"800") => string | undefined;
   onRead: (id: string | number) => void;
 }) {
-  const isSignal = item.type.startsWith("signal");
+  const notifType = String(item.type ?? "article"); // null-safe: never crash the Inbox on a typeless row
+  const isSignal = notifType.startsWith("signal");
 
   const signalColor =
     item.type === "signal-buy" || item.type === "signal-invest" ? C.primary
@@ -160,8 +161,9 @@ export default function InboxScreen() {
   const fontFamily = (weight: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, weight);
 
   const filtered = NOTIFICATIONS.filter(n => {
-    if (filter === "signals") return n.type.startsWith("signal") || n.type === "live";
-    if (filter === "reports") return n.type === "article";
+    const nt = String(n.type ?? "article"); // null-safe filter
+    if (filter === "signals") return nt.startsWith("signal") || nt === "live";
+    if (filter === "reports") return nt === "article";
     return true;
   });
 
