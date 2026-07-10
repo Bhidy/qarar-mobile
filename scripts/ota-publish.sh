@@ -81,6 +81,18 @@ fi
 ok "native fingerprint matches the live store build ($CURRENT_FP)"
 
 # ── GATE 3: publish ──────────────────────────────────────────────────────────
+# ── Gate 2.6 (2026-07-10 P0 post-mortem): the EAS ENVIRONMENT must carry the
+# EXPO_PUBLIC config. `eas update --environment X` sources env from the EAS env
+# store and IGNORES local .env — an empty environment ships a bundle with a NULL
+# supabase client ("Auth not configured" on every device; broke TestFlight+Play
+# sign-in on 2026-07-10). Fail CLOSED if any required var is missing.
+REQUIRED_VARS="EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_ANON_KEY EXPO_PUBLIC_PROJECT_ID"
+ENV_LIST=$(npx eas-cli env:list "$ENVIRONMENT" 2>/dev/null || true)
+for V in $REQUIRED_VARS; do
+  echo "$ENV_LIST" | grep -q "^$V=" || { echo "✗ EAS env '$ENVIRONMENT' is missing $V — populate it (eas env:create) before publishing. ABORTED."; exit 1; }
+done
+echo "✅ EAS env '$ENVIRONMENT' carries all required EXPO_PUBLIC vars"
+
 echo "${BLD}[3/3] Publishing update to '${CHANNEL}' (env: ${ENVIRONMENT}) …${RST}"
 # Publish to the branch named after the channel. The channel→branch link (created
 # once in setup — see OTA_UPDATE_RUNBOOK.md) routes it to binaries on that channel.

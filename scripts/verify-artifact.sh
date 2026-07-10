@@ -41,6 +41,15 @@ case "$ART" in
     ls "$APP_DIR/Frameworks" 2>/dev/null | grep -qiE "GoogleSignIn|AppAuth|RevenueCat|Purchases" && HITS="$HITS framework-name"
     [ -z "$HITS" ] || fail "forbidden symbols in:$HITS (stale pods? clean 'pod install' + rebuild)"
     ok "binary + frameworks clean of GoogleSignIn/AppAuth/RevenueCat symbols"
+    # REQUIRED strings (2026-07-10): the embedded JS bundle must carry the supabase
+    # config — a bundle without it ships a NULL auth client ("Auth not configured").
+    JSB=$(find "$APP_DIR" -name "main.jsbundle" | head -1)
+    if [ -n "$JSB" ]; then
+      grep -aq "iwwjpzkfxoglugjqkznc" "$JSB" || fail "embedded JS bundle is MISSING the supabase URL (env not inlined at export)"
+      ok "embedded JS bundle carries the supabase config"
+    else
+      echo "   ⚠ main.jsbundle not found in .app — verify env inlining manually"
+    fi
     ;;
   *.aab|*.apk)
     # Forbidden classes anywhere in the bundle (dex strings survive a raw scan).
