@@ -404,15 +404,6 @@ export default function LoginScreen() {
               end={{ x: 0.9, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
-            {/* Subtle grid overlay — web parity */}
-            <View style={s.heroGrid} pointerEvents="none">
-              {[0, 1, 2, 3, 4, 5].map(i => (
-                <View key={`h${i}`} style={[s.heroGridLine, { top: i * 56 }]} />
-              ))}
-              {[0, 1, 2, 3, 4, 5, 6].map(i => (
-                <View key={`v${i}`} style={[s.heroGridLineV, { left: i * 56 }]} />
-              ))}
-            </View>
             {/* Top radial bloom (white) */}
             <View style={s.heroBloomTop} pointerEvents="none" />
             {/* Bottom-right bloom (brand-blue) */}
@@ -746,13 +737,6 @@ const s = StyleSheet.create({
     paddingBottom: 56,
     overflow: "hidden",
     position: "relative",
-  },
-  heroGrid: { position: "absolute", inset: 0 as any, opacity: 0.08 },
-  heroGridLine: {
-    position: "absolute", left: 0, right: 0, height: 1, backgroundColor: "#FFFFFF",
-  },
-  heroGridLineV: {
-    position: "absolute", top: 0, bottom: 0, width: 1, backgroundColor: "#FFFFFF",
   },
   heroBloomTop: {
     position: "absolute",
