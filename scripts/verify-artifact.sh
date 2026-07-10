@@ -57,6 +57,19 @@ case "$ART" in
       fail "forbidden Android classes present (RevenueCat / GoogleSignIn / AppAuth)"
     fi
     ok "bundle clean of RevenueCat/GoogleSignIn/AppAuth classes"
+    # REQUIRED config (2026-07-10 P0): the embedded JS bundle inside the AAB must
+    # carry the supabase URL. AAB entries are DEFLATED — a grep on the raw zip
+    # cannot see inside; unzip and check the actual bundle asset.
+    AABTMP=$(mktemp -d)
+    unzip -qq "$ART" -d "$AABTMP" 2>/dev/null || true
+    JSA=$(find "$AABTMP" -name "index.android.bundle" -o -name "*.hbc" 2>/dev/null | head -1)
+    if [ -n "$JSA" ]; then
+      grep -aq "iwwjpzkfxoglugjqkznc" "$JSA" || { rm -rf "$AABTMP"; fail "embedded Android JS bundle is MISSING the supabase URL (env not inlined at export)"; }
+      ok "embedded Android JS bundle carries the supabase config"
+    else
+      echo "   ⚠ JS bundle asset not found inside AAB — verify env inlining manually"
+    fi
+    rm -rf "$AABTMP"
     # Signature: reject the debug keystore (CN=Android Debug) — the gradle trap.
     CERT=$(keytool -printcert -jarfile "$ART" 2>/dev/null | head -5 || true)
     echo "$CERT" | grep -q "Android Debug" && fail "artifact is DEBUG-SIGNED (build.gradle debug-keystore trap) — unshippable"
