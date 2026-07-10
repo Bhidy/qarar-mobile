@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { formatDate } from "@/lib/format-date";
+import { liveIndexLevel, indexPerformancePct } from "@/lib/index-quote";
 import { ScrollView, View, StyleSheet, Pressable, Image, Modal } from "react-native";
 import { WebView } from "react-native-webview";
 import { Text } from "@/components/shared/AppText";
@@ -45,7 +46,7 @@ export default function IndexUpdateScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const C = useColors();
   const { language, isRTL, isDark } = useTheme();
-  const { INDEX_UPDATES } = useData();
+  const { INDEX_UPDATES, PRICES } = useData();
   const isAr = language === "ar";
   const ff = (w: "400" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
 
@@ -130,6 +131,26 @@ export default function IndexUpdateScreen() {
                 </Text>
               )}
             </View>
+            {/* LIVE level + performance since the note (parity with web, 2026-07-10).
+                Auto-updates from the ingested index feed; hidden (never fabricated)
+                for indices we don't ingest (EGX70/NDX). */}
+            {(() => {
+              const liveLevel = liveIndexLevel(PRICES as any, item.indexSymbol);
+              const perf = indexPerformancePct(item.currentPrice, liveLevel);
+              if (liveLevel == null) return null;
+              return (
+                <View style={[styles.metaRow, isRTL && styles.rowRTL]}>
+                  <Text style={[styles.meta, { color: C.text.primary, fontFamily: ff("700") }]}>
+                    {isAr ? "الآن" : "Now"}: {ccy} {liveLevel.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </Text>
+                  {perf != null && (
+                    <Text style={[styles.meta, { color: perf >= 0 ? "#1F8F3B" : "#E5484D", fontFamily: ff("800") }]}>
+                      {"  "}{perf > 0 ? "+" : ""}{perf.toFixed(2)}% {isAr ? "منذ التوصية" : "since note"}
+                    </Text>
+                  )}
+                </View>
+              );
+            })()}
 
             {tvSym ? (
               <Pressable

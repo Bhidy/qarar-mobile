@@ -141,6 +141,17 @@ export default function StockDetail() {
     ? (closedPrice > 0 ? closedPrice : callPrice)
     : (Number(live?.lastPrice) > 0 ? Number(live!.lastPrice) : callPrice);
   const hasPrice = currentPrice > 0;
+  // ── STOCK hero price = the MARKET's live quote, ALWAYS (fixed 2026-07-10) ──
+  // The frozen exit price is a CALL record and belongs in the call card below;
+  // showing it as the stock's headline displayed PHDC at "سعر الإغلاق 13.90"
+  // while the stock traded at 14.78 (misleading-financial-display class).
+  // Resolution: live feed → call/exit price fallback with an UNAMBIGUOUS label.
+  // `currentPrice` (call math: exit/remaining/performance) is deliberately
+  // untouched — the record stays frozen, only the market display went live.
+  const heroLive = Number(live?.lastPrice) > 0 ? Number(live!.lastPrice) : 0;
+  const heroIsLive = heroLive > 0;
+  const heroPrice = heroIsLive ? heroLive : currentPrice;
+  const hasHeroPrice = heroPrice > 0;
   const targetPrice = Number(isFund ? fundCall?.targetPrice : techCall?.targetPrice) || 0;
   const hasTarget = targetPrice > 0;
   // Currency follows the market: Saudi/Tadawul tickers are 4-digit numerics → SAR.
@@ -200,7 +211,7 @@ export default function StockDetail() {
   // A CLOSED call is a frozen record — never show a LIVE/delayed day-change badge
   // next to its settled exit price (mirror of web: dayChangePct suppressed when
   // isClosedCall). Also require a real price before deriving/showing any change.
-  const liveChange = (!isClosedCall && hasPrice && typeof live?.changePct === "number") ? live.changePct : null;
+  const liveChange = (heroIsLive && typeof live?.changePct === "number") ? live.changePct : null;
   // Change % is shown ONLY from real data (live snapshot, else derived from real
   // bars). Never synthesized — if neither exists, the change row is omitted.
   const histChange = (!isClosedCall && hasPrice && hasHistory && history[0])
@@ -262,9 +273,9 @@ export default function StockDetail() {
           </View>
           <View style={[styles.priceRow, isRTL && { flexDirection: "row-reverse" }]}>
             <View>
-              <Text style={[styles.companyName, { color: C.text.muted }, isRTL && { textAlign: "right" }]}>{isClosedCall ? (isAr ? "سعر الإغلاق" : "Exit Price") : hasPrice ? (isAr ? "السعر الحالي" : "Current Price") : (isAr ? "السعر" : "Price")}</Text>
+              <Text style={[styles.companyName, { color: C.text.muted }, isRTL && { textAlign: "right" }]}>{heroIsLive ? (isAr ? "السعر الحالي" : "Current Price") : isClosedCall ? (isAr ? "سعر إغلاق التوصية" : "Call Exit Price") : hasHeroPrice ? (isAr ? "السعر الحالي" : "Current Price") : (isAr ? "السعر" : "Price")}</Text>
               <Text style={[styles.priceMain, { color: C.text.primary, fontFamily: displayFontFor(isAr, "800") }, isRTL && { textAlign: "right" }]}>
-                {hasPrice ? `${currentPrice.toFixed(2)}` : dash}
+                {hasHeroPrice ? `${heroPrice.toFixed(2)}` : dash}
               </Text>
               {hasChange ? (
                 <View style={[styles.changeRow, isRTL && { flexDirection: "row-reverse" }]}>

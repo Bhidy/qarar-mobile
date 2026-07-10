@@ -4,6 +4,7 @@
  */
 import { ScrollView, View, StyleSheet, Pressable, FlatList, RefreshControl, Image } from "react-native";
 import { formatDate } from "@/lib/format-date";
+import { liveIndexLevel, indexPerformancePct } from "@/lib/index-quote";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -32,7 +33,7 @@ import { indexCatalogEntry } from "@/constants/index-catalog";
 export default function TechnicalScreen() {
   const C = useColors();
   const { market, language, isRTL } = useTheme();
-  const { TECHNICAL_CALLS, ARTICLES, TECHNICAL_ARTICLES, INDEX_UPDATES, SAUDI_TECHNICAL, USA_TECHNICAL, loading, refetch } = useData();
+  const { TECHNICAL_CALLS, ARTICLES, TECHNICAL_ARTICLES, INDEX_UPDATES, SAUDI_TECHNICAL, USA_TECHNICAL, loading, refetch, PRICES } = useData();
 
   const watchlists = ARTICLES.filter(a => a.section === "technical");
   const watchlistItems = ARTICLES.filter(a => (a.section as string) === "watchlist");
@@ -196,6 +197,10 @@ export default function TechnicalScreen() {
                 const overviewColor = item.overview === "Bullish" ? "#1F8F3B" : item.overview === "Bearish" ? "#E5484D" : "#7C7C7C";
                 const overviewBg = item.overview === "Bullish" ? "rgba(132,223,92,0.16)" : item.overview === "Bearish" ? "rgba(229,72,77,0.12)" : "rgba(124,124,124,0.10)";
                 const overviewLabel = item.overview === "Bullish" ? (isAr ? "صعودي" : "Bullish") : item.overview === "Bearish" ? (isAr ? "هبوطي" : "Bearish") : (isAr ? "محايد" : "Neutral");
+                // LIVE %-since-note (parity with the web rail, 2026-07-10) — auto-
+                // updates from the ingested index feed; null (hidden) when the index
+                // has no feed (EGX70/NDX) or no initiation level. Never fabricated.
+                const idxPerf = indexPerformancePct(item.currentPrice, liveIndexLevel(PRICES as any, item.indexSymbol));
                 return (
                   <Pressable
                     style={[styles.watchCard, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }]}
@@ -226,6 +231,13 @@ export default function TechnicalScreen() {
                         <Text style={[styles.watchAuthor, { color: C.accent.teal, fontFamily: fontFamily("700") }]}>{item.analyst || ""}</Text>
                         <Text style={[styles.watchDate, { color: C.text.muted }]}>{formatDate(item.date)}</Text>
                       </View>
+                      {idxPerf != null && (
+                        <View style={[styles.watchMeta, isRTL && styles.rowRTL]}>
+                          <Text style={[styles.watchDate, { color: idxPerf >= 0 ? "#1F8F3B" : "#E5484D", fontFamily: fontFamily("800") }]}>
+                            {idxPerf > 0 ? "+" : ""}{idxPerf.toFixed(2)}% {isAr ? "منذ التوصية" : "since note"}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </Pressable>
                 );
