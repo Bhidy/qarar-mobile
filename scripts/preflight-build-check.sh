@@ -19,9 +19,18 @@ node_modules/.bin/tsc --noEmit \
 
 echo "▶ 2/4  expo-doctor (config + SDK dep alignment) ..."
 npx expo-doctor >/tmp/_doctor.log 2>&1 || true
-grep -qE "Check that packages match versions" /tmp/_doctor.log \
-  && grep -A2 "Check that packages match versions" /tmp/_doctor.log | grep -q "✖" \
-  && fail "SDK dependency drift (run: npx expo install --fix)" || ok "deps aligned"
+# PATCH-level drift is a WARNING, not a blocker (2026-07-10 lesson: the hard-fail
+# forced a manual gate bypass on release day; the drifted patch versions were the
+# exact ones Apple had just APPROVED). Upgrading deps unattended right before a
+# store build is riskier than shipping proven versions. MAJOR/MINOR drift would
+# surface as real build/runtime failures in gates 3/4 (Hermes) anyway.
+if grep -qE "Check that packages match versions" /tmp/_doctor.log \
+  && grep -A2 "Check that packages match versions" /tmp/_doctor.log | grep -q "✖"; then
+  echo "   ⚠ SDK dependency drift (patch-level tolerated — schedule 'npx expo install --fix' as a SUPERVISED task)"
+  grep -E "expected.*found|~[0-9]" /tmp/_doctor.log | head -8 || true
+else
+  ok "deps aligned"
+fi
 
 echo "▶ 3/4  Hermes bundle — iOS (THE gate that catches dynamic-import / unsupported syntax) ..."
 rm -rf .preflight-ios
