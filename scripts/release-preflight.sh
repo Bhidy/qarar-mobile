@@ -9,7 +9,15 @@
 #                     return to mobile (owner rule + App Store Guideline 4.8).
 #   3. TRUTH FROM THE STORE — prints the authoritative next iOS build number
 #                     from the App Store Connect API (never a stale comment).
-#   4. DISK GATE    — from-source RN builds need headroom (same as
+#   4. REVIEW DEMO LOGIN — the demo account on file with Apple (ASC
+#                     appStoreReviewDetail) must actually sign in against
+#                     production Supabase. On 2026-07-10 it was found DELETED
+#                     (wiped by a user purge) while a build sat
+#                     WAITING_FOR_REVIEW — a guaranteed Guideline 2.1
+#                     rejection. Credentials are fetched live from ASC, never
+#                     stored in this repo. Runs for Android too (the same
+#                     account is what Play app-access review uses).
+#   5. DISK GATE    — from-source RN builds need headroom (same as
 #                     build_testflight.sh).
 #
 # Usage:  bash scripts/release-preflight.sh            # all checks
@@ -112,7 +120,49 @@ else
   ok "native ios/ not generated (gitignored CNG) — versions will come from app.json at prebuild"
 fi
 
-# 4. Disk gate.
+# 4. App Review demo login — Guideline 2.1 tripwire (2026-07-10 incident:
+# the account was silently deleted by a user purge mid-review). Credentials
+# come from ASC appStoreReviewDetail at runtime; Supabase URL + anon key come
+# from eas.json (public values). Fail-closed: ASC unreachable / no demo
+# account on file / login rejected all block the release.
+# Test hook: DEMO_LOGIN_PASSWORD_OVERRIDE forces a specific password (used to
+# verify the failure path without touching the real account).
+node -e '
+const crypto=require("crypto"),fs=require("fs");
+const KEY_ID=process.argv[1],ISSUER=process.argv[2],KEY=fs.readFileSync(process.argv[3],"utf8");
+const b64=o=>Buffer.from(JSON.stringify(o)).toString("base64url");
+const now=Math.floor(Date.now()/1000);
+const hdr=b64({alg:"ES256",kid:KEY_ID,typ:"JWT"}),pl=b64({iss:ISSUER,iat:now,exp:now+600,aud:"appstoreconnect-v1"});
+const jwt=hdr+"."+pl+"."+crypto.sign("sha256",Buffer.from(hdr+"."+pl),{key:KEY,dsaEncoding:"ieee-p1363"}).toString("base64url");
+const H={Authorization:"Bearer "+jwt};
+const bundle=require("./app.json").expo.ios.bundleIdentifier;
+const env=require("./eas.json").build.production.env;
+const SUPA=env.EXPO_PUBLIC_SUPABASE_URL,ANON=env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+if(!SUPA||!ANON){console.error("eas.json production env missing Supabase URL/anon key");process.exit(1);}
+(async()=>{
+  const apps=await fetch("https://api.appstoreconnect.apple.com/v1/apps?filter[bundleId]="+bundle,{headers:H}).then(r=>r.json());
+  const app=apps.data&&apps.data[0]; if(!app){console.error("ASC: app not found for "+bundle);process.exit(1);}
+  const vs=await fetch("https://api.appstoreconnect.apple.com/v1/apps/"+app.id+"/appStoreVersions?limit=3",{headers:H}).then(r=>r.json());
+  let cred=null;
+  for(const v of vs.data||[]){
+    const rd=await fetch("https://api.appstoreconnect.apple.com/v1/appStoreVersions/"+v.id+"/appStoreReviewDetail",{headers:H}).then(r=>r.json());
+    const a=rd.data&&rd.data.attributes;
+    if(a&&a.demoAccountName&&a.demoAccountPassword){cred={email:a.demoAccountName,password:a.demoAccountPassword,version:v.attributes.versionString};break;}
+  }
+  if(!cred){console.error("no demo account on file in ASC appStoreReviewDetail — App Review cannot log in");process.exit(1);}
+  const password=process.env.DEMO_LOGIN_PASSWORD_OVERRIDE||cred.password;
+  const login=await fetch(SUPA+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:ANON,"Content-Type":"application/json"},body:JSON.stringify({email:cred.email,password:password})}).then(r=>r.json());
+  if(!login.access_token){
+    console.error("demo account \""+cred.email+"\" (ASC v"+cred.version+") FAILED to sign in: "+(login.error_code||login.msg||JSON.stringify(login).slice(0,120))+" — recreate it via the Supabase admin API with the SAME password Apple has (see memory: ios-appstore-submission), then re-run");
+    process.exit(1);
+  }
+  console.log(cred.email+" (ASC v"+cred.version+") signs in OK against production");
+})().catch(e=>{console.error("demo-login check errored: "+e.message);process.exit(1);});
+' "$ASC_KEY_ID" "$ASC_ISSUER_ID" "$ASC_KEY_PATH" > /tmp/ss-demo-login.txt 2>&1 \
+  || fail "App Review demo login gate — $(tail -1 /tmp/ss-demo-login.txt 2>/dev/null || echo unknown error)"
+ok "App Review demo account: $(cat /tmp/ss-demo-login.txt)"
+
+# 5. Disk gate.
 FREE_GB=$(df -g / | awk 'NR==2 {print $4}')
 [ "$FREE_GB" -ge 20 ] || fail "only ${FREE_GB}GB free — from-source builds need ≥20GB"
 ok "disk: ${FREE_GB}GB free"
