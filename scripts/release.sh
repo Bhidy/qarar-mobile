@@ -65,7 +65,7 @@ release_ios() {
 }
 
 release_android() {
-  bash scripts/release-preflight.sh
+  RELEASE_PLATFORM=android bash scripts/release-preflight.sh
   local VC; VC=$(node -e 'console.log(require("./app.json").expo.android.versionCode)')
   local OUT="build-android-vc${VC}.aab"
   EAS_NO_VCS=1 eas build -p android --profile preview-aab --local --non-interactive --output "$OUT"
