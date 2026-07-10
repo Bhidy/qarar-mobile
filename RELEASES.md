@@ -7,3 +7,4 @@ Every store upload: version, commit, date, artifact. Appended by scripts/release
 | 2026-07-10 | Android | vc16 | 0c0d4685 | Play internal via eas submit |
 | 2026-07-10 | iOS | 95 (v1.0.1) | 073cf8e2 | TestFlight — UPLOAD SUCCEEDED (verify-hook clean) |
 | 2026-07-10 | Android | vc17 | 073cf8e2 | Play internal via eas submit |
+| 2026-07-10 | Android | vc18 | 40f34c34 | Play internal via eas submit |
