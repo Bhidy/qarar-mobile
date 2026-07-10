@@ -481,7 +481,7 @@ export default function ProfileScreen() {
         {/* ── Account ─────────────────────────────────────────────────── */}
         <Section icon="person-circle-outline" title={t("profile.account")} C={C} rtl={rtl}>
           {/* Watchlist — local bookmarks saved via the stock page "Watch" toggle. */}
-          <PressRow icon="bookmark-outline" label={rtl ? "قائمة المتابعة" : "My Watchlist"} C={C} rtl={rtl} onPress={() => router.push("/watchlist" as any)} />
+          <PressRow icon="bookmark-outline" label={rtl ? "قائمة المتابعة" : "My Watchlist"} C={C} rtl={rtl} onPress={() => router.push("/watchlist")} />
           {user !== null && (
             <>
               <PressRow icon="person-outline" label={t('profile.editProfile')}   C={C} rtl={rtl} onPress={() => router.push('/edit-profile')} />

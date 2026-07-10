@@ -9,6 +9,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const supabaseUrl  = process.env.EXPO_PUBLIC_SUPABASE_URL  ?? "";
 const supabaseKey  = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
+/**
+ * supabase-js persists the session under this AsyncStorage key (its default:
+ * `sb-<project-ref>-auth-token`). Exported for the biometric soft sign-out,
+ * which must wipe the persisted session WITHOUT calling the server /logout
+ * (any server sign-out — even scope:"local" — revokes the refresh token the
+ * biometric vault depends on; proven E2E 2026-07-10).
+ */
+export const SUPABASE_AUTH_STORAGE_KEY = `sb-${(supabaseUrl.match(/^https?:\/\/([^.]+)\./)?.[1]) ?? "unknown"}-auth-token`;
+
 export const supabase = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey, {
       auth: {

@@ -92,6 +92,7 @@ const translations = {
   // ── Profile ──────────────────────────────────────────────────────
   profile: {
     title:           { en: "Profile",               ar: "الملف الشخصي" },
+    market:          { en: "Market",                 ar: "السوق" },
     appearance:      { en: "Appearance",             ar: "المظهر" },
     theme:           { en: "Theme",                  ar: "المظهر" },
     lightMode:       { en: "Light",                  ar: "فاتح" },

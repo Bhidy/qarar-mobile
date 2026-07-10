@@ -63,6 +63,13 @@ export function ScreenHeader({
       <View style={[styles.actions, isRTL && styles.rowRTL]}>
         <Pressable
           style={[styles.iconBtn, { backgroundColor: C.bg.elevated, borderColor: C.border.subtle }]}
+          onPress={() => router.push("/watchlist")}
+          accessibilityLabel={isAr ? "قائمة المتابعة" : "Watchlist"}
+        >
+          <Ionicons name="bookmark-outline" size={18} color={C.text.secondary} />
+        </Pressable>
+        <Pressable
+          style={[styles.iconBtn, { backgroundColor: C.bg.elevated, borderColor: C.border.subtle }]}
           onPress={() => router.push("/search")}
           accessibilityLabel={isAr ? "بحث" : "Search"}
         >

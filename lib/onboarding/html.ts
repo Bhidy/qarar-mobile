@@ -16,8 +16,8 @@ import {
   MANROPE_500,
   MANROPE_600,
   MANROPE_700,
-  PLEX_AR_500,
-  PLEX_AR_700,
+  CAIRO_400,
+  CAIRO_700,
 } from "./fonts";
 
 export interface OnboardingHtmlOptions {
@@ -30,7 +30,6 @@ export interface OnboardingHtmlOptions {
 // ── Copy (mirrors the approved bilingual slide content) ───────────────────────
 const SLIDES = [
   {
-    eyebrow: { en: "Discover", ar: "اكتشف" },
     title: { en: "A Clearer View<br>of the Market", ar: "رؤية أوضح<br>للسوق" },
     body: {
       en: "Professional signals from elite market analysts to help you read opportunities and make more informed decisions.",
@@ -38,7 +37,6 @@ const SLIDES = [
     },
   },
   {
-    eyebrow: { en: "Act", ar: "تداول" },
     title: { en: "Clear Signals.<br>Sharper Decisions.", ar: "إشارات واضحة.<br>قرارات أدق." },
     body: {
       en: "Buy, sell and hold calls with clear price targets and precise entry and exit points.",
@@ -46,7 +44,6 @@ const SLIDES = [
     },
   },
   {
-    eyebrow: { en: "Alerts", ar: "تنبيهات" },
     title: { en: "Never Miss<br>a Move", ar: "لا تفوّت<br>أي فرصة" },
     body: {
       en: "Instant alerts the moment any new signal or market update is published.",
@@ -69,12 +66,12 @@ export function buildOnboardingHtml({ isAr, topInset, bottomInset }: OnboardingH
   const L = isAr ? "ar" : "en";
   const dir = isAr ? "rtl" : "ltr";
 
-  // Per-language brand type. Arabic display uses IBM Plex Sans Arabic (Sora has
-  // no Arabic glyphs); the Latin brand word keeps Manrope in both languages.
+  // Per-language brand type. Arabic = Cairo (brand Arabic font, owner request
+  // 2026-07-10); the Latin brand word keeps Manrope in both languages.
   const fontFaces = isAr
     ? `
-@font-face{font-family:'IBM Plex Sans Arabic';font-weight:500;font-display:swap;src:url(data:font/woff2;base64,${PLEX_AR_500}) format('woff2');}
-@font-face{font-family:'IBM Plex Sans Arabic';font-weight:700;font-display:swap;src:url(data:font/woff2;base64,${PLEX_AR_700}) format('woff2');}
+@font-face{font-family:'Cairo';font-weight:400;font-display:swap;src:url(data:font/woff2;base64,${CAIRO_400}) format('woff2');}
+@font-face{font-family:'Cairo';font-weight:700;font-display:swap;src:url(data:font/woff2;base64,${CAIRO_700}) format('woff2');}
 @font-face{font-family:'Manrope';font-weight:700;font-display:swap;src:url(data:font/woff2;base64,${MANROPE_700}) format('woff2');}`
     : `
 @font-face{font-family:'Sora';font-weight:800;font-display:swap;src:url(data:font/woff2;base64,${SORA_800}) format('woff2');}
@@ -83,16 +80,15 @@ export function buildOnboardingHtml({ isAr, topInset, bottomInset }: OnboardingH
 @font-face{font-family:'Manrope';font-weight:700;font-display:swap;src:url(data:font/woff2;base64,${MANROPE_700}) format('woff2');}`;
 
   const uiFont = isAr
-    ? `'IBM Plex Sans Arabic',-apple-system,system-ui,sans-serif`
+    ? `'Cairo',-apple-system,system-ui,sans-serif`
     : `'Manrope',-apple-system,system-ui,sans-serif`;
   const displayFont = isAr
-    ? `'IBM Plex Sans Arabic',-apple-system,system-ui,sans-serif`
+    ? `'Cairo',-apple-system,system-ui,sans-serif`
     : `'Sora',-apple-system,system-ui,sans-serif`;
 
   const slidesHtml = SLIDES.map(
     (s, i) => `
       <div class="ob-slide${i === 0 ? " active" : ""}" data-i="${i}">
-        <span class="ob-eyebrow">${s.eyebrow[L]}</span>
         <h1 class="ob-title">${s.title[L]}</h1>
         <p class="ob-sub">${s.body[L]}</p>
       </div>`,
@@ -136,12 +132,9 @@ body{font-family:${uiFont};}
 .ob-content{position:absolute;left:0;right:0;bottom:${Math.round(bottomInset) + 128}px;z-index:5;padding:0 30px;height:210px;}
 .ob-slide{position:absolute;left:30px;right:30px;bottom:0;opacity:0;pointer-events:none;transition:opacity .35s cubic-bezier(.22,1,.36,1);}
 .ob-slide.active{opacity:1;pointer-events:auto;}
-.ob-eyebrow{display:inline-block;font-size:${isAr ? 11 : 10}px;font-weight:700;letter-spacing:${isAr ? "0" : ".24em"};text-transform:uppercase;color:#8FB4FF;
-  background:rgba(77,142,248,.12);border:1px solid rgba(77,142,248,.28);padding:5px 13px;border-radius:100px;margin-bottom:15px;}
-.ob-title{font-family:${displayFont};font-size:${isAr ? 30 : 31}px;font-weight:800;color:#fff;letter-spacing:${isAr ? "0" : "-.03em"};line-height:${isAr ? 1.3 : 1.08};margin-bottom:13px;}
+.ob-title{font-family:${displayFont};font-size:${isAr ? 30 : 31}px;font-weight:${isAr ? 700 : 800};color:#fff;letter-spacing:${isAr ? "0" : "-.03em"};line-height:${isAr ? 1.3 : 1.08};margin-bottom:13px;}
 .ob-sub{font-size:14px;font-weight:500;color:rgba(255,255,255,.6);line-height:${isAr ? 1.75 : 1.6};max-width:310px;}
-.ob-slide .ob-eyebrow,.ob-slide .ob-title,.ob-slide .ob-sub{opacity:0;transform:translateY(18px);filter:blur(6px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1),filter .6s cubic-bezier(.22,1,.36,1);}
-.ob-slide.active .ob-eyebrow{opacity:1;transform:none;filter:none;transition-delay:.08s;}
+.ob-slide .ob-slide .ob-title,.ob-slide .ob-sub{opacity:0;transform:translateY(18px);filter:blur(6px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1),filter .6s cubic-bezier(.22,1,.36,1);}
 .ob-slide.active .ob-title{opacity:1;transform:none;filter:none;transition-delay:.16s;}
 .ob-slide.active .ob-sub{opacity:1;transform:none;filter:none;transition-delay:.24s;}
 

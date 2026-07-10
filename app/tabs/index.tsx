@@ -140,6 +140,13 @@ export default function HomeScreen() {
             {/* Market pill — HIDDEN: re-enable when Saudi/USA are fully ready */}
             <Pressable
               style={[styles.notifBtn, { backgroundColor: C.bg.elevated, borderColor: C.border.subtle }]}
+              onPress={() => router.push("/watchlist")}
+              accessibilityLabel={isAr ? "قائمة المتابعة" : "Watchlist"}
+            >
+              <Ionicons name="bookmark-outline" size={18} color={C.text.secondary} />
+            </Pressable>
+            <Pressable
+              style={[styles.notifBtn, { backgroundColor: C.bg.elevated, borderColor: C.border.subtle }]}
               onPress={() => router.push("/search")}
               accessibilityLabel="Search"
             >

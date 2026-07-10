@@ -10,7 +10,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { supabase } from "@/lib/supabase";
+import { supabase, SUPABASE_AUTH_STORAGE_KEY } from "@/lib/supabase";
 import { useTheme } from "@/context/ThemeContext";
 import { WEB_BASE } from "@/constants/site";
 
@@ -117,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithPassword = useCallback(async (email: string, password: string) => {
     if (!supabase) return { error: "Auth not configured" };
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error) supabase.auth.startAutoRefresh(); // in case a soft sign-out stopped it
     return error ? err(error) : {};
   }, []);
   const signUp = useCallback(async (email: string, password: string, fullName?: string) => {
@@ -137,11 +138,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
-    // Vault the refresh token BEFORE sign-out so the login screen's Face ID /
-    // Touch ID button can rebuild a session afterwards (see BIO_SESSION_KEY
-    // security comment at the top of this file). Best-effort — sign-out itself
-    // must never be blocked by vault failures.
-    let vaulted = false;
+    // BIOMETRIC SOFT SIGN-OUT (build-99 field fix, 2026-07-10): calling the
+    // server /logout — even with scope:"local" — revokes the current session's
+    // refresh token, which killed the vault the instant it was written (proven
+    // E2E: "Invalid Refresh Token: Refresh Token Not Found"). With Face ID
+    // enabled we therefore LOCK LOCALLY ONLY: vault the refresh token, stop
+    // the background refresh timer (nothing may rotate the vaulted token),
+    // wipe the persisted session, and drop the in-app auth state. The server
+    // session stays alive strictly for biometric restore — reaching it again
+    // requires the device owner's Face ID / Touch ID. Full server sign-out
+    // still happens whenever biometrics are off.
     try {
       const bioEnabled = (await AsyncStorage.getItem(BIO_ENABLED_KEY)) === "true";
       if (bioEnabled) {
@@ -149,14 +155,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const rt = data.session?.refresh_token;
         if (rt) {
           await AsyncStorage.setItem(BIO_SESSION_KEY, JSON.stringify({ refresh_token: rt }));
-          vaulted = true;
+          supabase.auth.stopAutoRefresh();
+          await AsyncStorage.removeItem(SUPABASE_AUTH_STORAGE_KEY);
+          // No SIGNED_OUT event fires (no client call) — clear our state manually,
+          // mirroring the onAuthStateChange cleanup path.
+          setSession(null); setUser(null); tokenRef.current = null;
+          bindPhotoToUser(null);
+          return;
         }
       }
-    } catch { /* vault is best-effort */ }
-    // scope:"local" when vaulted — the default GLOBAL sign-out revokes every
-    // refresh token server-side, which would kill the vaulted one instantly.
-    await supabase.auth.signOut(vaulted ? { scope: "local" } : undefined);
-  }, []);
+    } catch { /* fall through to the full sign-out */ }
+    await supabase.auth.signOut();
+  }, [bindPhotoToUser]);
 
   /**
    * Restore a session from the biometric vault (called by login.tsx AFTER a
@@ -177,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: error?.message || "Session expired" };
       }
       await AsyncStorage.setItem(BIO_SESSION_KEY, JSON.stringify({ refresh_token: data.session.refresh_token }));
+      supabase.auth.startAutoRefresh(); // soft sign-out stopped the refresh timer
       return {};
     } catch (e: any) {
       await AsyncStorage.removeItem(BIO_SESSION_KEY).catch(() => {});
@@ -206,6 +217,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const verifyResetOtp = useCallback(async (email: string, token: string) => {
     if (!supabase) return { error: "Auth not configured" };
     const { error } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
+    if (!error) supabase.auth.startAutoRefresh(); // in case a soft sign-out stopped it
     return error ? err(error) : {};
   }, []);
 
