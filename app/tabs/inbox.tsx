@@ -153,14 +153,22 @@ function NotifItem({ item, C, isRTL, isAr, fontFamily, onRead }: {
 
 export default function InboxScreen() {
   const C = useColors();
-  const { language, isRTL } = useTheme();
+  const { language, isRTL, market } = useTheme();
   const { NOTIFICATIONS, markNotificationRead, markAllNotificationsRead } = useData();
   const [filter, setFilter] = useState<FilterType>("all");
 
   const isAr = language === "ar";
   const fontFamily = (weight: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, weight);
 
-  const filtered = NOTIFICATIONS.filter(n => {
+  // Market gate (same selector as app/tabs/news.tsx): rows tagged with a market
+  // show ONLY in that market; empty/"both"/undefined rows are platform-wide
+  // notices, visible in ALL markets (unlike calls' inMarket(), where blank = Egypt).
+  const marketVisible = NOTIFICATIONS.filter(n => {
+    const m = String(n.market ?? "").toLowerCase();
+    return !m || m === "both" || m === market;
+  });
+
+  const filtered = marketVisible.filter(n => {
     const nt = String(n.type ?? "article"); // null-safe filter
     if (filter === "signals") return nt.startsWith("signal") || nt === "live";
     if (filter === "reports") return nt === "article";
@@ -192,7 +200,7 @@ export default function InboxScreen() {
     { label: isAr ? "سابقاً"     : "Earlier",    items: earlier },
   ].filter(g => g.items.length > 0);
 
-  const unreadCount = NOTIFICATIONS.filter(n => !n.read).length;
+  const unreadCount = marketVisible.filter(n => !n.read).length;
 
   const filterOptions: { key: FilterType; label: string }[] = [
     { key: "all",     label: isAr ? "الكل"    : "All" },
@@ -282,7 +290,9 @@ export default function InboxScreen() {
             <View style={[styles.emptyState, { backgroundColor: C.bg.surface }]}>
               <Ionicons name="mail-open-outline" size={40} color={C.text.muted} />
               <Text style={[styles.emptyText, { color: C.text.muted, fontFamily: fontFamily("600") }]}>
-                {isAr ? "لا توجد إشعارات" : "No notifications"}
+                {marketVisible.length === 0
+                  ? (isAr ? "لا توجد تنبيهات لهذا السوق بعد" : "No alerts for this market yet")
+                  : (isAr ? "لا توجد إشعارات" : "No notifications")}
               </Text>
             </View>
           ) : (

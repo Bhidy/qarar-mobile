@@ -8,10 +8,30 @@ import { useColors, useTheme, MARKETS_ENABLED } from "@/context/ThemeContext";
 import { Spacing, Radius, Typography } from "@/constants/theme";
 import { fontFamilyFor } from "@/lib/typography";
 import { SignalBadge } from "@/components/shared/SignalBadge";
+import { TickerLogo } from "@/components/shared/TickerLogo";
 import { visibleCallUpdates } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
 
 const has = (s: any, q: string) => typeof s === "string" && s.toLowerCase().includes(q);
+
+// Whole-word match for PROSE fields (titles / company names) so a ticker query
+// like "COMI" never matches inside "upcoming"/"economic". The query must sit on
+// token boundaries (non-alphanumeric on both sides). Implemented with a manual
+// indexOf scan — NOT a regex lookbehind, which Hermes doesn't reliably support.
+// Ticker fields keep the plain substring `has` (exact/prefix behaviour unchanged).
+const isAlnum = (ch: string) => /[a-z0-9؀-ۿ]/i.test(ch);
+const hasWord = (s: any, q: string) => {
+  if (typeof s !== "string" || !q) return false;
+  const hay = s.toLowerCase();
+  let idx = hay.indexOf(q);
+  while (idx !== -1) {
+    const before = idx > 0 ? hay[idx - 1] : "";
+    const after = idx + q.length < hay.length ? hay[idx + q.length] : "";
+    if ((!before || !isAlnum(before)) && (!after || !isAlnum(after))) return true;
+    idx = hay.indexOf(q, idx + 1);
+  }
+  return false;
+};
 
 type Hit = { key: string; ticker?: string; title: string; subtitle?: string; signal?: string; market?: string; updates?: number; go: () => void };
 
@@ -19,7 +39,7 @@ type Hit = { key: string; ticker?: string; title: string; subtitle?: string; sig
  *  results (Calls / Reports / News / Research) over the already-loaded content. */
 export default function SearchScreen() {
   const C = useColors();
-  const { language, isRTL } = useTheme();
+  const { language, isRTL, market } = useTheme();
   const isAr = language === "ar";
   const ff = (w: "400" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
   const {
@@ -37,7 +57,7 @@ export default function SearchScreen() {
     const seen = new Set<string>();
     const pushCall = (c: any, market: string, kind: string) => {
       const tk = String(c.ticker ?? "");
-      if (!(has(tk, q) || has(c.company, q) || has(c.companyAr, q))) return;
+      if (!(has(tk, q) || hasWord(c.company, q) || hasWord(c.companyAr, q))) return;
       const k = `${kind}:${tk}:${market}`;
       if (seen.has(k)) return; seen.add(k);
       calls.push({
@@ -57,7 +77,7 @@ export default function SearchScreen() {
 
     const reports: Hit[] = [];
     [...(ARTICLES as any[]), ...(SAUDI_ARTICLES as any[])].forEach((a: any) => {
-      if (has(a.ticker, q) || has(a.title, q) || has(a.titleAr, q)) {
+      if (has(a.ticker, q) || hasWord(a.title, q) || hasWord(a.titleAr, q)) {
         reports.push({
           key: `art:${a.id}`, ticker: a.ticker, market: a.market,
           title: isAr && a.titleAr ? a.titleAr : a.title, subtitle: a.section,
@@ -66,7 +86,7 @@ export default function SearchScreen() {
       }
     });
     (TECHNICAL_ARTICLES as any[]).forEach((a: any) => {
-      if (has(a.ticker, q) || has(a.title, q) || has(a.titleAr, q)) {
+      if (has(a.ticker, q) || hasWord(a.title, q) || hasWord(a.titleAr, q)) {
         reports.push({
           key: `ta:${a.id}`, ticker: a.ticker, market: a.market,
           title: isAr && a.titleAr ? a.titleAr : a.title, subtitle: isAr ? "تقرير فني" : "Technical report",
@@ -79,7 +99,7 @@ export default function SearchScreen() {
     const seenN = new Set<string>();
     [...(NEWS as any[]), ...(SAUDI_NEWS as any[]), ...(USA_NEWS as any[])].forEach((n: any) => {
       if (seenN.has(n.id)) return;
-      if (has(n.ticker, q) || has(n.title, q) || has(n.titleAr, q)) {
+      if (has(n.ticker, q) || hasWord(n.title, q) || hasWord(n.titleAr, q)) {
         seenN.add(n.id);
         news.push({
           key: `news:${n.id}`, ticker: n.ticker, market: n.market,
@@ -103,11 +123,14 @@ export default function SearchScreen() {
 
   const Row = ({ hit }: { hit: Hit }) => (
     <Pressable onPress={hit.go} style={[styles.row, { backgroundColor: C.bg.surface, borderColor: C.border.subtle }, isRTL && styles.rowRTL]}>
-      <View style={[styles.rowIcon, { backgroundColor: C.bg.elevated }]}>
-        {hit.ticker ? (
-          <Text style={[styles.rowTicker, { color: C.primary, fontFamily: ff("800") }]}>{hit.ticker}</Text>
-        ) : <Ionicons name="document-text-outline" size={16} color={C.text.muted} />}
-      </View>
+      {hit.ticker ? (
+        // Company logo tile (shared TickerLogo: local SVG → CDN → initials fallback).
+        <TickerLogo ticker={hit.ticker} size={34} />
+      ) : (
+        <View style={[styles.rowIcon, { backgroundColor: C.bg.elevated }]}>
+          <Ionicons name="document-text-outline" size={16} color={C.text.muted} />
+        </View>
+      )}
       <View style={{ flex: 1 }}>
         <View style={[styles.rowTop, isRTL && styles.rowRTL]}>
           {hit.ticker ? <Text style={[styles.rowSymbol, { color: C.text.primary, fontFamily: ff("800") }]}>{hit.ticker}</Text> : null}
@@ -157,7 +180,14 @@ export default function SearchScreen() {
             autoFocus
             value={query}
             onChangeText={setQuery}
-            placeholder={isAr ? "ابحث بالرمز… مثل COMI، TAQA، 2222" : "Search by symbol… e.g. COMI, TAQA, 2222"}
+            placeholder={
+              // Market-aware examples: Tadawul = numeric symbols, EGX = Latin tickers.
+              market === "saudi"
+                ? (isAr ? "ابحث بالرمز… مثل 2222، 1120" : "Search by symbol… e.g. 2222, 1120")
+                : market === "usa"
+                ? (isAr ? "ابحث بالرمز… مثل AAPL، MSFT" : "Search by symbol… e.g. AAPL, MSFT")
+                : (isAr ? "ابحث بالرمز… مثل COMI، TMGH" : "Search by symbol… e.g. COMI, TMGH")
+            }
             placeholderTextColor={C.text.muted}
             style={[styles.input, { color: C.text.primary, fontFamily: ff("400"), textAlign: isAr ? "right" : "left" }]}
             autoCapitalize="characters"

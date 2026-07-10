@@ -210,7 +210,7 @@ export default function LoginScreen() {
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
   const df = (w: "400" | "600" | "700" | "800") => displayFontFor(isAr, w);
-  const { signInWithPassword, signUp, resetPassword, verifyResetOtp, updatePassword, user } = useAuth();
+  const { signInWithPassword, signUp, resetPassword, verifyResetOtp, updatePassword, restoreBiometricSession, user } = useAuth();
 
   const T = (en: string, ar: string) => (isAr ? ar : en);
 
@@ -284,8 +284,18 @@ export default function LoginScreen() {
     if (!result.success) return;
     if (user) {
       router.replace("/tabs");
+      return;
+    }
+    // No in-memory session (normal after an explicit sign-out) — rebuild one
+    // from the biometric vault (refresh token saved by AuthContext.signOut).
+    const restored = await restoreBiometricSession();
+    if (!restored.error) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/tabs");
     } else {
-      await AsyncStorage.removeItem("@biometric_enabled");
+      // Vault empty/expired (restoreBiometricSession already purged it) —
+      // disable the biometric shortcut and fall back to password sign-in.
+      await AsyncStorage.multiRemove(["@biometric_enabled", "@bio_session_v1"]);
       setBiometricEnabled(false);
       setErrors({ general: T("Your session has expired. Please sign in again.", "انتهت جلستك. يرجى تسجيل الدخول مجدداً.") });
     }
@@ -431,7 +441,7 @@ export default function LoginScreen() {
   const showModeSwitcher = mode === "signin" || mode === "signup";
 
   const heroHeadline =
-    mode === "signin"  ? (isAr ? "مرحبًا بعودتك" : "Welcome back")
+    mode === "signin"  ? (isAr ? "مرحبًا بك" : "Welcome") // generic — first-time users land here too
   : mode === "signup"  ? (isAr ? "أنشئ حسابك" : "Create your account")
   :                      (isAr ? "إعادة تعيين كلمة المرور" : "Reset password");
 

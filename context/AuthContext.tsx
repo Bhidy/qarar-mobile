@@ -9,9 +9,29 @@
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/context/ThemeContext";
 import { WEB_BASE } from "@/constants/site";
+
+/**
+ * Biometric session vault — lets "Sign in with Face ID / Touch ID" work AFTER an
+ * explicit sign-out (previously signOut() destroyed the Supabase session, so the
+ * login screen's biometric button always dead-ended on "session expired").
+ *
+ * SECURITY ENVELOPE: the vault stores ONLY the Supabase refresh token, JSON-
+ * wrapped, in AsyncStorage — the SAME storage supabase-js itself uses to persist
+ * the full session (access + refresh tokens) on React Native. Keeping one more
+ * refresh token there is therefore security-EQUIVALENT to the signed-in state
+ * that already lives on the device; it does not widen the threat model. Refresh
+ * tokens are single-use: restoreBiometricSession() rotates the stored token on
+ * every successful refresh, and any failed refresh purges the vault. An upgrade
+ * to expo-secure-store (iOS Keychain / Android Keystore) rides the NEXT NATIVE
+ * TRAIN — it cannot ship OTA because that native module is not in the current
+ * binary.
+ */
+const BIO_SESSION_KEY = "@bio_session_v1";
+const BIO_ENABLED_KEY = "@biometric_enabled";
 
 interface AuthValue {
   user: User | null;
@@ -23,6 +43,8 @@ interface AuthValue {
   sendOtp: (email: string) => Promise<{ error?: string }>;
   verifyOtp: (email: string, token: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
+  /** Rebuild a session from the biometric vault (post-sign-out Face ID login). */
+  restoreBiometricSession: () => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
   /** Step 2 of the OTP reset flow — verifies the emailed code, opens a recovery session. */
   verifyResetOtp: (email: string, token: string) => Promise<{ error?: string }>;
@@ -38,6 +60,7 @@ const AuthContext = createContext<AuthValue>({
   signInWithPassword: async () => ({}),
   signUp: async () => ({}), sendOtp: async () => ({}),
   verifyOtp: async () => ({}), signOut: async () => {},
+  restoreBiometricSession: async () => ({}),
   resetPassword: async () => ({}), verifyResetOtp: async () => ({}), updatePassword: async () => ({}),
   updateEmail: async () => ({}), updateFullName: async () => ({}), updatePhone: async () => ({}),
   deleteAccount: async () => ({}),
@@ -63,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const serverAvatar = (data.session?.user?.user_metadata?.avatar_url as string | undefined) ?? null;
       if (serverAvatar) setPhotoUri(serverAvatar);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((evt, s) => {
       setSession(s); setUser(s?.user ?? null);
       tokenRef.current = s?.access_token ?? null;
       // Rebind on every auth transition. SIGNED_OUT → null → photo cleared so the
@@ -72,6 +95,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (s?.user) {
         const nextAvatar = (s.user.user_metadata?.avatar_url as string | undefined) ?? null;
         setPhotoUri(nextAvatar);
+      }
+      // Biometric vault refresh: after a normal sign-in (and on token rotation,
+      // since Supabase invalidates the previous refresh token) keep the vault
+      // holding a CURRENT refresh token — but only while biometric is enabled.
+      if ((evt === "SIGNED_IN" || evt === "TOKEN_REFRESHED") && s?.refresh_token) {
+        AsyncStorage.getItem(BIO_ENABLED_KEY)
+          .then((v) => {
+            if (v === "true") {
+              return AsyncStorage.setItem(BIO_SESSION_KEY, JSON.stringify({ refresh_token: s.refresh_token }));
+            }
+          })
+          .catch(() => { /* vault is best-effort */ });
       }
     });
     return () => { mounted = false; sub.subscription.unsubscribe(); };
@@ -102,7 +137,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (!supabase) return;
-    await supabase.auth.signOut();
+    // Vault the refresh token BEFORE sign-out so the login screen's Face ID /
+    // Touch ID button can rebuild a session afterwards (see BIO_SESSION_KEY
+    // security comment at the top of this file). Best-effort — sign-out itself
+    // must never be blocked by vault failures.
+    let vaulted = false;
+    try {
+      const bioEnabled = (await AsyncStorage.getItem(BIO_ENABLED_KEY)) === "true";
+      if (bioEnabled) {
+        const { data } = await supabase.auth.getSession();
+        const rt = data.session?.refresh_token;
+        if (rt) {
+          await AsyncStorage.setItem(BIO_SESSION_KEY, JSON.stringify({ refresh_token: rt }));
+          vaulted = true;
+        }
+      }
+    } catch { /* vault is best-effort */ }
+    // scope:"local" when vaulted — the default GLOBAL sign-out revokes every
+    // refresh token server-side, which would kill the vaulted one instantly.
+    await supabase.auth.signOut(vaulted ? { scope: "local" } : undefined);
+  }, []);
+
+  /**
+   * Restore a session from the biometric vault (called by login.tsx AFTER a
+   * successful Face ID / Touch ID prompt when no in-memory session exists).
+   * Rotation: Supabase refresh tokens are single-use, so the NEW session's
+   * refresh token is re-vaulted immediately on success. Any failure purges the
+   * vault so a dead token can never be retried.
+   */
+  const restoreBiometricSession = useCallback(async (): Promise<{ error?: string }> => {
+    if (!supabase) return { error: "Auth not configured" };
+    try {
+      const raw = await AsyncStorage.getItem(BIO_SESSION_KEY);
+      const rt: string | undefined = raw ? JSON.parse(raw)?.refresh_token : undefined;
+      if (!rt) return { error: "No saved session" };
+      const { data, error } = await supabase.auth.refreshSession({ refresh_token: rt });
+      if (error || !data.session) {
+        await AsyncStorage.removeItem(BIO_SESSION_KEY).catch(() => {});
+        return { error: error?.message || "Session expired" };
+      }
+      await AsyncStorage.setItem(BIO_SESSION_KEY, JSON.stringify({ refresh_token: data.session.refresh_token }));
+      return {};
+    } catch (e: any) {
+      await AsyncStorage.removeItem(BIO_SESSION_KEY).catch(() => {});
+      return { error: e?.message || "Session restore failed" };
+    }
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
@@ -167,6 +246,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const j = await res.json().catch(() => ({}));
         return { error: (j as any).error || "Failed to delete account" };
       }
+      // Account is gone — purge the biometric vault so Face ID can never try to
+      // resurrect a session for a deleted user.
+      await AsyncStorage.multiRemove([BIO_SESSION_KEY, BIO_ENABLED_KEY]).catch(() => {});
       await supabase!.auth.signOut();
       return {};
     } catch (e: any) {
@@ -178,7 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user, session, loading, accessToken: session?.access_token ?? null,
       signInWithPassword,
-      signUp, sendOtp, verifyOtp, signOut,
+      signUp, sendOtp, verifyOtp, signOut, restoreBiometricSession,
       resetPassword, verifyResetOtp, updatePassword, updateEmail, updateFullName, updatePhone, deleteAccount,
     }}>
       {children}

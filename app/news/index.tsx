@@ -35,10 +35,17 @@ export default function AllNewsScreen() {
 
   const [activeTab, setActiveTab] = useState<NewsTab>("market");
 
+  // Language strictness (applies to BOTH the Egypt and Saudi pools): the DISPLAY
+  // title (titleAr-first in AR, title in EN) must be genuinely in the UI language —
+  // AR mode requires real Arabic script, EN mode rejects any Arabic script.
+  // Empty titles are dropped defensively.
   const news = useMemo(() => {
     return (isSaudi ? SAUDI_NEWS : NEWS).filter((n: any) => {
-      const arabicNative = isArabicText(n.title);
-      return isAr ? (arabicNative || !!n.titleAr?.trim()) : !arabicNative;
+      const display = isAr
+        ? String(n.titleAr ?? "").trim() || String(n.title ?? "").trim()
+        : String(n.title ?? "").trim();
+      if (!display) return false;
+      return isAr ? isArabicText(display) : !isArabicText(display);
     });
   }, [NEWS, SAUDI_NEWS, isSaudi, isAr]);
 

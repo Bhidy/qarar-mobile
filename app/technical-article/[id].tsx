@@ -15,7 +15,7 @@ import { Spacing, Radius, Typography } from "@/constants/theme";
 import { useData } from "@/hooks/useData";
 import { fontFamilyFor } from "@/lib/typography";
 import { NewsCover } from "@/components/shared/NewsCover";
-import { tradingViewChartHtml, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
+import { tradingViewChartHtml, advancedChartUrl, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
 import { tvSymbol, tvInterval } from "@/lib/tv-symbol";
 
 /** Strip HTML → readable paragraphs (no WebView dependency on mobile). */
@@ -87,6 +87,10 @@ export default function TechnicalArticleScreen() {
   const chartMarket = item ? (item.market === "saudi" ? "saudi" : item.market === "usa" ? "usa" : "egypt") : "egypt";
   const tvSym = item ? tvSymbol(primaryTicker, chartMarket, item.chartSymbol) : "";
   const tvInt = item ? (tvInterval(item.chartTimeframe, item.chartInterval) || "D") : "D";
+  // USA symbols keep the FREE TradingView widget (covered natively); EGX/Tadawul
+  // use our self-hosted Advanced Chart (/embed/chart, own /api/udf data) — the
+  // free widget silently falls back to AAPL for symbols it doesn't carry.
+  const chartIsUsa = chartMarket === "usa" || (tvSym !== "" && !tvSym.includes(":"));
 
   const pick = (en?: string, ar?: string) => (isAr ? (ar || en) : (en || ar)) ?? "";
   const title = item ? pick(item.title, item.titleAr) : "";
@@ -226,7 +230,9 @@ export default function TechnicalArticleScreen() {
             </View>
             {showLiveChart ? (
               <WebView
-                source={{ html: tradingViewChartHtml(tvSym, tvInt, isDark ? "dark" : "light", isAr ? "ar" : "en", []), baseUrl: TV_BASE_URL }}
+                source={chartIsUsa
+                  ? { html: tradingViewChartHtml(tvSym, tvInt, isDark ? "dark" : "light", isAr ? "ar" : "en", []), baseUrl: TV_BASE_URL }
+                  : { uri: advancedChartUrl(tvSym, { theme: isDark ? "dark" : "light", lang: isAr ? "ar" : "en", interval: tvInt }) }}
                 originWhitelist={["*"]}
                 javaScriptEnabled
                 domStorageEnabled

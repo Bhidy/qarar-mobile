@@ -374,6 +374,8 @@ export interface Notification {
   price?: string;
   read?: boolean;
   articleId?: string;
+  /** "egypt" | "saudi" | "usa" — empty/"both"/undefined = platform-wide (visible in ALL markets). */
+  market?: string;
 }
 
 export const NOTIFICATIONS: Notification[] = [

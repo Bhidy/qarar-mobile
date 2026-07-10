@@ -23,9 +23,30 @@
  *   <WebView source={{ html, baseUrl }} onShouldStartLoadWithRequest={webviewAllowRequest} ... />
  */
 
+import { WEB_BASE } from "@/constants/site";
+
 export const YT_BASE_URL = "https://www.youtube.com";
 export const SPOTIFY_BASE_URL = "https://open.spotify.com";
 export const TV_BASE_URL = "https://www.tradingview.com";
+
+/**
+ * Self-hosted TradingView Advanced Chart page (web /embed/chart) driven by OUR
+ * own price data via /api/udf. Used for EGX + Tadawul symbols, which the FREE
+ * tv.js widget doesn't carry — it silently falls back to AAPL for them. USA
+ * symbols keep the free-widget HTML path (TradingView covers them natively).
+ * Load as a plain `{ uri }` WebView source (not html) so the page's own
+ * origin/assets resolve. Query params are built manually — RN's URLSearchParams
+ * polyfill doesn't implement toString().
+ */
+export function advancedChartUrl(
+  symbol: string,
+  opts: { theme?: "light" | "dark"; lang?: string; interval?: string } = {},
+): string {
+  const theme = opts.theme === "dark" ? "dark" : "light";
+  const lang = opts.lang === "ar" ? "ar" : "en";
+  const interval = (opts.interval || "D").trim() || "D";
+  return `${WEB_BASE}/embed/chart?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}&theme=${theme}&lang=${lang}`;
+}
 
 /**
  * TradingView Advanced Chart (free widget) for an in-app WebView — the same live

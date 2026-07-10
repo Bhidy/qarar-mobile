@@ -33,11 +33,17 @@ export default function NewsTabScreen() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("all");
 
-  // 1. language filter
+  // 1. language filter — STRICT (both Egypt and Saudi pools): the DISPLAY title
+  //    (titleAr-first in AR, title in EN) must be genuinely in the UI language —
+  //    AR mode requires real Arabic script, EN mode rejects any Arabic script.
+  //    Empty titles are dropped defensively.
   const langFiltered = useMemo(() => {
     return (isSaudi ? SAUDI_NEWS : NEWS).filter((n: any) => {
-      const arabicNative = isArabicText(n.title);
-      return isAr ? (arabicNative || !!n.titleAr?.trim()) : !arabicNative;
+      const display = isAr
+        ? String(n.titleAr ?? "").trim() || String(n.title ?? "").trim()
+        : String(n.title ?? "").trim();
+      if (!display) return false;
+      return isAr ? isArabicText(display) : !isArabicText(display);
     });
   }, [NEWS, SAUDI_NEWS, isSaudi, isAr]);
 

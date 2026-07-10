@@ -178,6 +178,7 @@ function AppLayout() {
         <Stack.Screen name="news/index" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="articles/index" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="search" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
+        <Stack.Screen name="watchlist" options={{ animation: "slide_from_right" }} />
         <Stack.Screen name="profile" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
         <Stack.Screen name="login" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />
         <Stack.Screen name="biometric" options={{ animation: "fade", gestureEnabled: false, headerShown: false }} />

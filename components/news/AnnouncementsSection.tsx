@@ -28,6 +28,10 @@ interface AnnDetail {
   titleAr?: string | null;
 }
 
+// Same helper as the news screens — a title is "Arabic" only if it carries real
+// Arabic script (not merely because a titleAr field happens to be populated).
+const isArabicText = (s?: string | null) => !!s && /[؀-ۿ]/.test(s);
+
 async function loadBody(annId: string): Promise<AnnDetail | null> {
   const rawId = annId.startsWith("ann-") ? annId.slice(4) : annId;
   try {
@@ -84,6 +88,16 @@ export function AnnouncementsSection() {
   const closeAnn = useCallback(() => setActive(null), []);
 
   const visible = items.filter(a => {
+    // Language gate (mirrors the news screens): AR mode → the display title
+    // (titleAr-first) must be genuinely Arabic; EN mode → `title` must exist and
+    // carry no Arabic script. Empty titles are dropped defensively. The existing
+    // empty state below covers a fully-filtered list.
+    const display = isAr
+      ? (a.titleAr ?? "").trim() || (a.title ?? "").trim()
+      : (a.title ?? "").trim();
+    if (!display) return false;
+    if (isAr ? !isArabicText(display) : isArabicText(display)) return false;
+
     if (!query.trim()) return true;
     const q = query.toLowerCase();
     return (

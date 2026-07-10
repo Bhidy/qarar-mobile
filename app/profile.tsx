@@ -169,9 +169,19 @@ export default function ProfileScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
+      // User just declined the system prompt and can be asked again → no nag.
+      if (perm.canAskAgain) return;
+      // Permanently denied → the system prompt will never re-appear; the ONLY
+      // way forward is the Settings app, so offer to open it directly.
       Alert.alert(
         language === "ar" ? "إذن مطلوب" : "Permission Required",
-        language === "ar" ? "يرجى السماح بالوصول إلى مكتبة الصور." : "Please allow access to your photo library."
+        language === "ar"
+          ? "الوصول إلى الصور معطّل. فعّله من الإعدادات لرفع صورة شخصية."
+          : "Photo access is disabled. Enable it in Settings to upload a profile photo.",
+        [
+          { text: language === "ar" ? "إلغاء" : "Cancel", style: "cancel" },
+          { text: language === "ar" ? "فتح الإعدادات" : "Open Settings", onPress: () => Linking.openSettings() },
+        ]
       );
       return;
     }
@@ -470,6 +480,8 @@ export default function ProfileScreen() {
 
         {/* ── Account ─────────────────────────────────────────────────── */}
         <Section icon="person-circle-outline" title={t("profile.account")} C={C} rtl={rtl}>
+          {/* Watchlist — local bookmarks saved via the stock page "Watch" toggle. */}
+          <PressRow icon="bookmark-outline" label={rtl ? "قائمة المتابعة" : "My Watchlist"} C={C} rtl={rtl} onPress={() => router.push("/watchlist" as any)} />
           {user !== null && (
             <>
               <PressRow icon="person-outline" label={t('profile.editProfile')}   C={C} rtl={rtl} onPress={() => router.push('/edit-profile')} />

@@ -743,6 +743,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
               price:      n.price,
               read:       n.read ?? false,
               articleId:  n.articleId ?? n.articleid,
+              market:     n.market ?? undefined,
             }))
           : mk(STATIC_NOTIFICATIONS, []),
         SAUDI_FUNDAMENTAL: saudiFund.length     > 0 ? applyBenchmark(applyLivePrices(saudiFund.map(toSaudiStock), PRICES, "remaining"), indexMap, "saudi") : mk(STATIC_SAUDI_FUND, []),

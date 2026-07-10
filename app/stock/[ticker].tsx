@@ -24,7 +24,7 @@ import { CollapsibleDisclaimer } from "@/components/shared/CollapsibleDisclaimer
 import { fontFamilyFor, displayFontFor } from "@/lib/typography";
 import { ConvictionMark } from "@/components/shared/ConvictionMark";
 import { WEB_BASE } from "@/constants/site";
-import { tradingViewChartHtml, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
+import { tradingViewChartHtml, advancedChartUrl, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
 import { tvSymbol, tvInterval, parseTvStudies } from "@/lib/tv-symbol";
 import { getMarketStatus, formatAsOfLocal, type MarketKey } from "@/lib/market-status";
 
@@ -125,6 +125,11 @@ export default function StockDetail() {
   const markDown = isDark ? "#E4615A" : "#C53030";
   const live = PRICES[(ticker ?? "").toUpperCase()];        // real Mubasher snapshot, if synced
   const profile = COMPANIES[(ticker ?? "").toUpperCase()];  // real company profile (RT=30), if synced
+  // USA symbols (bare, no EXCHANGE: prefix, or feed-tagged usa) keep the FREE
+  // TradingView widget — it covers US listings natively. EGX/Tadawul symbols use
+  // our self-hosted Advanced Chart (/embed/chart, own /api/udf data) instead,
+  // because the free widget silently falls back to AAPL for symbols it lacks.
+  const chartIsUsa = live?.market === "usa" || (tvSym !== "" && !tvSym.includes(":"));
 
   // ── Price / metric resolution (data-integrity hardened 2026-07-05) ──────────
   // Mirror of web/app/(dashboard)/stock/[ticker]/page.tsx. A MISSING price must
@@ -634,7 +639,9 @@ export default function StockDetail() {
             </View>
             {showLiveChart ? (
               <WebView
-                source={{ html: tradingViewChartHtml(tvSym, tvInt, isDark ? "dark" : "light", isAr ? "ar" : "en", tvStudies), baseUrl: TV_BASE_URL }}
+                source={chartIsUsa
+                  ? { html: tradingViewChartHtml(tvSym, tvInt, isDark ? "dark" : "light", isAr ? "ar" : "en", tvStudies), baseUrl: TV_BASE_URL }
+                  : { uri: advancedChartUrl(tvSym, { theme: isDark ? "dark" : "light", lang: isAr ? "ar" : "en", interval: tvInt }) }}
                 originWhitelist={["*"]}
                 javaScriptEnabled
                 domStorageEnabled
