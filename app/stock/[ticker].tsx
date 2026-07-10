@@ -155,7 +155,12 @@ export default function StockDetail() {
   const targetPrice = Number(isFund ? fundCall?.targetPrice : techCall?.targetPrice) || 0;
   const hasTarget = targetPrice > 0;
   // Currency follows the market: Saudi/Tadawul tickers are 4-digit numerics → SAR.
-  const ccy = (profile as any)?.currency ?? (/^\d{3,4}$/.test(ticker ?? "") ? "SAR" : "EGP");
+  // Currency follows the MARKET (mirror of web): the live feed row carries the
+  // authoritative market — a US ticker must never render "EGP" (latent while the
+  // USA market is flag-disabled, fixed defensively 2026-07-10).
+  const ccy = (profile as any)?.currency
+    ?? (live?.market === "usa" ? "USD" : live?.market === "saudi" ? "SAR"
+        : /^\d{3,4}$/.test(ticker ?? "") ? "SAR" : "EGP");
   const dash = isAr ? "غير متاح" : "—";
 
   // Remaining upside to target — only meaningful for an OPEN call with a real price.
