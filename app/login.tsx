@@ -69,6 +69,7 @@ interface FormErrors {
   confirmPassword?: string;
   fullName?: string;
   terms?: string;
+  code?: string;
   general?: string;
 }
 
@@ -209,7 +210,7 @@ export default function LoginScreen() {
   const isAr = language === "ar";
   const ff = (w: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, w);
   const df = (w: "400" | "600" | "700" | "800") => displayFontFor(isAr, w);
-  const { signInWithPassword, signUp, resetPassword, user } = useAuth();
+  const { signInWithPassword, signUp, resetPassword, verifyResetOtp, updatePassword, user } = useAuth();
 
   const T = (en: string, ar: string) => (isAr ? ar : en);
 
@@ -224,7 +225,10 @@ export default function LoginScreen() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [forgotSuccess, setForgotSuccess] = useState(false);
+  // OTP password-reset step machine: email → code → new password.
+  const [forgotStep, setForgotStep] = useState<"email" | "code" | "password">("email");
+  const [resetCode, setResetCode] = useState("");
+  const [resendIn, setResendIn] = useState(0);
   const [hasBiometric, setHasBiometric] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState<"faceID" | "touchID" | null>(null);
@@ -240,6 +244,12 @@ export default function LoginScreen() {
 
   // ── Effects ────────────────────────────────────────────────────────────
   useEffect(() => { initBiometric(); }, []);
+  // Resend-code cooldown ticker (forgot-password flow).
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setInterval(() => setResendIn((sec) => (sec > 0 ? sec - 1 : 0)), 1000);
+    return () => clearInterval(id);
+  }, [resendIn > 0]);
   // When the switcher width is known, animate the pill to the current mode's
   // position. Tab order is reversed in AR (Sign in on the right, Register on
   // the left), so the pill's "left" offset has to follow whichever physical
@@ -305,12 +315,28 @@ export default function LoginScreen() {
     // both mode AND isAr), so all this needs to do is move state.
     setMode(m);
     setErrors({});
-    setForgotSuccess(false);
+    setForgotStep("email");
+    setResetCode("");
   }
 
   function validateForm(): FormErrors {
     const errs: FormErrors = {};
     const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (mode === "forgot") {
+      if (forgotStep === "email") {
+        if (!email.trim()) errs.email = T("Email is required.", "البريد الإلكتروني مطلوب.");
+        else if (!emailReg.test(email.trim())) errs.email = T("Enter a valid email address.", "أدخل بريدًا إلكترونيًا صحيحًا.");
+      } else if (forgotStep === "code") {
+        if (!/^\d{6}$/.test(resetCode.trim())) errs.code = T("Enter the 6-digit code from your email.", "أدخل الرمز المكوّن من 6 أرقام من بريدك.");
+      } else {
+        if (!password) errs.password = T("Password is required.", "كلمة المرور مطلوبة.");
+        else if (password.length < 8) errs.password = T("Password must be at least 8 characters.", "كلمة المرور 8 أحرف على الأقل.");
+        if (!confirmPassword) errs.confirmPassword = T("Confirm your password.", "أكّد كلمة المرور.");
+        else if (confirmPassword !== password) errs.confirmPassword = T("Passwords do not match.", "كلمتا المرور غير متطابقتين.");
+      }
+      return errs;
+    }
 
     if (!email.trim()) errs.email = T("Email is required.", "البريد الإلكتروني مطلوب.");
     else if (!emailReg.test(email.trim())) errs.email = T("Enter a valid email address.", "أدخل بريدًا إلكترونيًا صحيحًا.");
@@ -352,10 +378,43 @@ export default function LoginScreen() {
         await AsyncStorage.setItem("@onboarding_done", "true");
         router.replace("/tabs");
       } else if (mode === "forgot") {
-        const r = await resetPassword(email.trim());
-        if (r.error) { setErrors({ general: localizeAuthError(r.error, isAr) }); return; }
-        setForgotSuccess(true);
+        // OTP reset: email → code → new password (user ends up signed in).
+        if (forgotStep === "email") {
+          const r = await resetPassword(email.trim());
+          if (r.error) { setErrors({ general: localizeAuthError(r.error, isAr) }); return; }
+          setForgotStep("code");
+          setResendIn(60);
+        } else if (forgotStep === "code") {
+          const r = await verifyResetOtp(email.trim(), resetCode.trim());
+          if (r.error) {
+            setErrors({ code: T("This code is invalid or has expired. Request a new one.", "الرمز غير صحيح أو منتهي الصلاحية. اطلب رمزًا جديدًا.") });
+            return;
+          }
+          setPassword("");
+          setConfirmPassword("");
+          setForgotStep("password");
+        } else {
+          const r = await updatePassword(password);
+          if (r.error) { setErrors({ general: localizeAuthError(r.error, isAr) }); return; }
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          await AsyncStorage.setItem("@onboarding_done", "true");
+          router.replace("/tabs");
+        }
       }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendResetCode() {
+    if (busy || resendIn > 0) return;
+    Haptics.selectionAsync();
+    setErrors({});
+    setBusy(true);
+    try {
+      const r = await resetPassword(email.trim());
+      if (r.error) { setErrors({ general: localizeAuthError(r.error, isAr) }); return; }
+      setResendIn(60);
     } finally {
       setBusy(false);
     }
@@ -365,7 +424,9 @@ export default function LoginScreen() {
     ? T("Securing your session…", "جارٍ تأمين جلستك…")
     : mode === "signin"  ? T("Sign in", "تسجيل الدخول")
     : mode === "signup"  ? T("Create account", "إنشاء حساب")
-    : T("Send reset link", "إرسال رابط إعادة التعيين");
+    : forgotStep === "email" ? T("Send code", "إرسال الرمز")
+    : forgotStep === "code"  ? T("Verify code", "تأكيد الرمز")
+    : T("Set new password", "تعيين كلمة المرور الجديدة");
 
   const showModeSwitcher = mode === "signin" || mode === "signup";
 
@@ -377,7 +438,9 @@ export default function LoginScreen() {
   const heroSub =
     mode === "signin"  ? (isAr ? "سجّل الدخول للوصول إلى الأبحاث والتنبيهات وأدوات المتابعة." : "Sign in to access research, alerts, and portfolio tools.")
   : mode === "signup"  ? (isAr ? "أنشئ حسابك مرة واحدة وابدأ تجربة Smart Signals الكاملة." : "Create your account once and unlock the full Smart Signals experience.")
-  :                      (isAr ? "سنرسل رابط إعادة التعيين إلى بريدك المسجل." : "We'll send a reset link to your registered email.");
+  : forgotStep === "email" ? (isAr ? "سنرسل رمزًا من 6 أرقام إلى بريدك المسجل." : "We'll email a 6-digit code to your registered email.")
+  : forgotStep === "code"  ? (isAr ? `أدخل الرمز المرسل إلى ${email.trim()}` : `Enter the code we sent to ${email.trim()}`)
+  :                          (isAr ? "تم التحقق — اختر كلمة المرور الجديدة." : "You're verified — choose your new password.");
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
@@ -521,26 +584,8 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
-            {/* ── Forgot-success state ── */}
-            {mode === "forgot" && forgotSuccess ? (
-              <View style={s.successBox}>
-                <View style={s.successIcon}>
-                  <Ionicons name="mail-open-outline" size={28} color={BRAND.primary} />
-                </View>
-                <Text style={[s.successTitle, { fontFamily: ff("800") }]}>
-                  {T("Check your email", "تحقق من بريدك")}
-                </Text>
-                <Text style={[s.successBody, { fontFamily: ff("400") }]}>
-                  {T(`We sent a reset link to ${email.trim()}.`, `أرسلنا رابط إعادة التعيين إلى ${email.trim()}.`)}
-                </Text>
-                <Pressable onPress={() => switchMode("signin")} style={s.linkRow} hitSlop={8}>
-                  <Text style={[s.linkText, { color: BRAND.primary, fontFamily: ff("700") }]}>
-                    {T("Back to sign in", "العودة لتسجيل الدخول")}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : (
-              <View style={s.form}>
+            {/* ── Form (all modes; forgot renders its step machine) ── */}
+            <View style={s.form}>
                 {mode === "signup" && (
                   <Field
                     icon="person-outline"
@@ -552,15 +597,70 @@ export default function LoginScreen() {
                   />
                 )}
 
-                <Field
-                  icon="mail-outline"
-                  label={T("Email address", "البريد الإلكتروني")}
-                  value={email}
-                  onChangeText={(v) => { setEmail(v); if (errors.email) setErrors((e) => ({ ...e, email: undefined })); }}
-                  error={errors.email}
-                  ff={ff} isAr={isAr} keyboardType="email-address" autoComplete="email"
-                  autoCapitalize="none" autoCorrect={false}
-                />
+                {(mode !== "forgot" || forgotStep === "email") && (
+                  <Field
+                    icon="mail-outline"
+                    label={T("Email address", "البريد الإلكتروني")}
+                    value={email}
+                    onChangeText={(v) => { setEmail(v); if (errors.email) setErrors((e) => ({ ...e, email: undefined })); }}
+                    error={errors.email}
+                    ff={ff} isAr={isAr} keyboardType="email-address" autoComplete="email"
+                    autoCapitalize="none" autoCorrect={false}
+                  />
+                )}
+
+                {/* ── Forgot: 6-digit code step ── */}
+                {mode === "forgot" && forgotStep === "code" && (
+                  <View>
+                    <Field
+                      icon="keypad-outline"
+                      label={T("6-digit code", "الرمز المكوّن من 6 أرقام")}
+                      value={resetCode}
+                      onChangeText={(v) => { setResetCode(v.replace(/\D/g, "").slice(0, 6)); if (errors.code) setErrors((e) => ({ ...e, code: undefined })); }}
+                      error={errors.code}
+                      ff={ff} isAr={isAr} keyboardType="number-pad" autoComplete="one-time-code"
+                      autoCapitalize="none" autoCorrect={false}
+                    />
+                    <View style={[s.resendRow, { flexDirection: isAr ? "row-reverse" : "row" }]}>
+                      <Pressable onPress={() => { setForgotStep("email"); setResetCode(""); setErrors({}); }} hitSlop={8}>
+                        <Text style={[s.resendMuted, { fontFamily: ff("600") }]}>
+                          {T("Use a different email", "استخدام بريد آخر")}
+                        </Text>
+                      </Pressable>
+                      <Pressable onPress={resendResetCode} disabled={busy || resendIn > 0} hitSlop={8}>
+                        <Text style={[s.resendLink, { fontFamily: ff("700"), opacity: busy || resendIn > 0 ? 0.45 : 1 }]}>
+                          {resendIn > 0
+                            ? T(`Resend code (${resendIn}s)`, `إعادة الإرسال (${resendIn}ث)`)
+                            : T("Resend code", "إعادة إرسال الرمز")}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                {/* ── Forgot: new password step ── */}
+                {mode === "forgot" && forgotStep === "password" && (
+                  <View>
+                    <Field
+                      icon="lock-closed-outline"
+                      label={T("New password", "كلمة المرور الجديدة")}
+                      value={password}
+                      onChangeText={(v) => { setPassword(v); if (errors.password) setErrors((e) => ({ ...e, password: undefined })); }}
+                      error={errors.password}
+                      ff={ff} isAr={isAr} secure toggled={showPassword} onToggle={() => setShowPassword((v) => !v)}
+                      autoCapitalize="none" autoCorrect={false}
+                    />
+                    <Field
+                      icon="lock-closed-outline"
+                      label={T("Confirm new password", "تأكيد كلمة المرور الجديدة")}
+                      value={confirmPassword}
+                      onChangeText={(v) => { setConfirmPassword(v); if (errors.confirmPassword) setErrors((e) => ({ ...e, confirmPassword: undefined })); }}
+                      error={errors.confirmPassword}
+                      ff={ff} isAr={isAr} secure toggled={showConfirmPassword} onToggle={() => setShowConfirmPassword((v) => !v)}
+                      autoCapitalize="none" autoCorrect={false}
+                    />
+                  </View>
+                )}
 
                 {(mode === "signin" || mode === "signup") && (
                   <View>
@@ -598,7 +698,7 @@ export default function LoginScreen() {
                     )}
                     {mode === "signin" && (
                       <Pressable
-                        onPress={() => { setMode("forgot"); setErrors({}); setForgotSuccess(false); }}
+                        onPress={() => { setMode("forgot"); setErrors({}); setForgotStep("email"); setResetCode(""); }}
                         style={[s.forgotLink, { alignSelf: isAr ? "flex-start" : "flex-end" }]}
                         hitSlop={8}
                       >
@@ -718,8 +818,7 @@ export default function LoginScreen() {
                     </Text>
                   </Pressable>
                 )}
-              </View>
-            )}
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -904,9 +1003,10 @@ const s = StyleSheet.create({
   forgotLink: { marginTop: 10, paddingVertical: 2 },
   forgotText: { fontSize: 13 },
 
-  // Resend
-  resendRow: { alignItems: "center", marginTop: 12 },
-  resendText: { fontSize: 13 },
+  // Resend (forgot-password code step)
+  resendRow: { alignItems: "center", justifyContent: "space-between", marginTop: 4, marginBottom: 4 },
+  resendMuted: { fontSize: 13, color: BRAND.muted },
+  resendLink: { fontSize: 13, color: BRAND.primary },
 
   // Terms
   termsRow: {
@@ -976,15 +1076,4 @@ const s = StyleSheet.create({
   // Link row (back-to-signin etc)
   linkRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: Spacing[1] },
   linkText: { fontSize: 14 },
-
-  // Success
-  successBox: { alignItems: "center", gap: 14, paddingVertical: Spacing[6] },
-  successIcon: {
-    width: 64, height: 64, borderRadius: 22,
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: BRAND.primarySoft,
-    borderWidth: 1, borderColor: `${BRAND.primary}26`,
-  },
-  successTitle: { color: BRAND.ink, fontSize: 20 },
-  successBody: { color: BRAND.ink2, fontSize: 14, textAlign: "center", lineHeight: 22, maxWidth: 300 },
 });

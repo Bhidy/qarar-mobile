@@ -24,6 +24,8 @@ interface AuthValue {
   verifyOtp: (email: string, token: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error?: string }>;
+  /** Step 2 of the OTP reset flow — verifies the emailed code, opens a recovery session. */
+  verifyResetOtp: (email: string, token: string) => Promise<{ error?: string }>;
   updatePassword: (newPassword: string) => Promise<{ error?: string }>;
   updateEmail: (newEmail: string) => Promise<{ error?: string }>;
   updateFullName: (name: string) => Promise<{ error?: string }>;
@@ -36,7 +38,7 @@ const AuthContext = createContext<AuthValue>({
   signInWithPassword: async () => ({}),
   signUp: async () => ({}), sendOtp: async () => ({}),
   verifyOtp: async () => ({}), signOut: async () => {},
-  resetPassword: async () => ({}), updatePassword: async () => ({}),
+  resetPassword: async () => ({}), verifyResetOtp: async () => ({}), updatePassword: async () => ({}),
   updateEmail: async () => ({}), updateFullName: async () => ({}), updatePhone: async () => ({}),
   deleteAccount: async () => ({}),
 });
@@ -104,8 +106,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
+    // Prefer the web endpoint: branded Sender.net email carrying the 6-digit
+    // OTP (same flow as the website, plus captcha/throttle protections).
+    // Falls back to Supabase's own recovery email — whose template also
+    // carries the code — if the site is unreachable.
+    try {
+      const res = await fetch(`${WEB_BASE}/api/auth/send-reset-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) return {};
+    } catch { /* network — fall through to Supabase direct */ }
     if (!supabase) return { error: "Auth not configured" };
     const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return error ? err(error) : {};
+  }, []);
+
+  /** Step 2 of the OTP reset flow — verifies the emailed code, opens a recovery session. */
+  const verifyResetOtp = useCallback(async (email: string, token: string) => {
+    if (!supabase) return { error: "Auth not configured" };
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: "recovery" });
     return error ? err(error) : {};
   }, []);
 
@@ -158,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, session, loading, accessToken: session?.access_token ?? null,
       signInWithPassword,
       signUp, sendOtp, verifyOtp, signOut,
-      resetPassword, updatePassword, updateEmail, updateFullName, updatePhone, deleteAccount,
+      resetPassword, verifyResetOtp, updatePassword, updateEmail, updateFullName, updatePhone, deleteAccount,
     }}>
       {children}
     </AuthContext.Provider>
