@@ -517,17 +517,25 @@ const mk = <T,>(mock: T, empty: T): T => (ALLOW_MOCK ? mock : empty);
 const missingFeedTables = new Set<string>();
 async function feedSelect(table: string, orderCol?: string): Promise<any[]> {
   if (!supabasePublic || missingFeedTables.has(table)) return [];
-  const q = orderCol
-    ? supabasePublic.from(table).select("*").order(orderCol, { ascending: false })
-    : supabasePublic.from(table).select("*");
-  const { data, error } = await q;
-  if (error) {
-    if ((error as any).code === "PGRST205" || /does not exist|find the table|schema cache/i.test(error.message || "")) {
-      missingFeedTables.add(table);
+  // PostgREST caps any response at 1,000 rows. `prices` crossed that line when
+  // full-exchange coverage landed (2026-07-10) and hundreds of tickers silently
+  // lost their live price in the app — page explicitly (bounded at 5,000 rows).
+  const PAGE = 1000;
+  const rows: any[] = [];
+  for (let page = 0; page < 5; page++) {
+    const base = supabasePublic.from(table).select("*").range(page * PAGE, page * PAGE + PAGE - 1);
+    const q = orderCol ? base.order(orderCol, { ascending: false }) : base;
+    const { data, error } = await q;
+    if (error) {
+      if ((error as any).code === "PGRST205" || /does not exist|find the table|schema cache/i.test(error.message || "")) {
+        missingFeedTables.add(table);
+      }
+      return rows;
     }
-    return [];
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
   }
-  return data ?? [];
+  return rows;
 }
 
 type DataState = Omit<AppData, "refetch" | "markNotificationRead" | "markAllNotificationsRead">;

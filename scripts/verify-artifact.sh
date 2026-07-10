@@ -80,3 +80,21 @@ case "$ART" in
 esac
 
 echo "── Artifact VERIFIED — safe to ship ──────────────────────────"
+
+# ── EMBEDDED RUNTIME GATE (build-99 incident, 2026-07-10) ────────────────────
+# A binary whose embedded expo-updates runtime differs from app.json's
+# expo.version is ORPHANED from every OTA. Refuse to ship one.
+EXPECT_RT=$(node -e 'console.log(require("./app.json").expo.version)')
+case "$1" in
+  *.ipa)
+    RT=$(unzip -p "$1" "Payload/*.app/Expo.plist" 2>/dev/null | plutil -extract EXUpdatesRuntimeVersion raw - 2>/dev/null || echo MISSING)
+    [ "$RT" = "$EXPECT_RT" ] || { echo "   ✗ embedded iOS runtime '$RT' != expected '$EXPECT_RT' — OTA-orphaned binary, DO NOT SHIP"; exit 1; }
+    echo "   ✓ embedded iOS runtime = $RT (matches app.json)";;
+  *.aab)
+    if unzip -p "$1" base/manifest/AndroidManifest.xml 2>/dev/null | grep -q "file:fingerprint"; then
+      echo "   ✗ Android manifest still carries the fingerprint runtime policy — OTA-orphaned binary, DO NOT SHIP"; exit 1
+    fi
+    unzip -p "$1" base/manifest/AndroidManifest.xml 2>/dev/null | grep -q "$EXPECT_RT" \
+      && echo "   ✓ embedded Android runtime string '$EXPECT_RT' present" \
+      || { echo "   ✗ expected runtime '$EXPECT_RT' not found in Android manifest — DO NOT SHIP"; exit 1; };;
+esac

@@ -66,6 +66,9 @@ release_ios() {
 
 release_android() {
   RELEASE_PLATFORM=android bash scripts/release-preflight.sh
+  # CNG config sync (build-99 incident): regenerate android/ config from
+  # app.json so runtimeVersion/plugins actually reach the binary.
+  npx expo prebuild --platform android --no-install 2>&1 | tail -2
   local VC; VC=$(node -e 'console.log(require("./app.json").expo.android.versionCode)')
   local OUT="build-android-vc${VC}.aab"
   EAS_NO_VCS=1 eas build -p android --profile preview-aab --local --non-interactive --output "$OUT"
