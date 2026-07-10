@@ -4,7 +4,7 @@
     "slug": "rumble-pro",
     "version": "1.0.1",
     "runtimeVersion": {
-      "policy": "fingerprint"
+      "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/8d61ac43-8ae4-4fe3-a101-558817aabe3e",
@@ -31,7 +31,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rumble.pro",
-      "buildNumber": "98",
+      "buildNumber": "99",
       "appleTeamId": "7F4FTZQ5H7",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
@@ -47,7 +47,7 @@
         "backgroundColor": "#0A0E1F"
       },
       "package": "com.rumble.pro",
-      "versionCode": 20,
+      "versionCode": 21,
       "googleServicesFile": "./google-services.json",
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",

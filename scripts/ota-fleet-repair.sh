@@ -11,11 +11,26 @@
 # This script republishes the CURRENT JS to every live fleet runtime by
 # temporarily stamping each shipped (buildNumber, versionCode[, version])
 # tuple, re-baselining the OTA guard, and running the fully-gated publish.
-# The FOREVER fix (fingerprint.config.js with ExpoConfigVersions sourceSkips)
-# ships separately — after it, all future binaries share one stable runtime.
+#
+# FOREVER FIX (owner-approved 2026-07-10): runtimeVersion policy is now
+# "appVersion" — binaries from iOS 99 / Android vc21 onward share the stable
+# runtime "1.0.1" and receive plain `ota-publish.sh` updates directly. This
+# script remains ONLY to reach the legacy fingerprint-runtime binaries
+# (94–98 / vc16–20); it temporarily flips the policy back to "fingerprint"
+# per tuple, then restores. Retire it once the store fleet is ≥99/vc21.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+set_policy() { # set_policy fingerprint|appVersion
+  node -e '
+    const fs=require("fs");const j=JSON.parse(fs.readFileSync("app.json","utf8"));
+    j.expo.runtimeVersion={policy:process.argv[1]};
+    fs.writeFileSync("app.json",JSON.stringify(j,null,2)+"\n");
+  ' "$1"
+}
+trap 'set_policy appVersion' EXIT   # never leave the repo on the legacy policy
+set_policy fingerprint
 
 # (iosBuild androidVc version) tuples of every binary users can be running.
 # 97/19 already received today's groups but is included for freshness/uniformity.
@@ -35,7 +50,9 @@ for t in "${TUPLES[@]}"; do
     || echo "⚠ publish FAILED for tuple $t — continuing"
 done
 
-# Restore the real current stamps (build 98 / vc20) + guard baseline.
-bash scripts/release.sh stamp 98 20 1.0.1 >/dev/null
+# Restore the real current stamps + guard baseline (policy restored by trap).
+CUR_IOS="${CURRENT_IOS_BUILD:-99}"; CUR_VC="${CURRENT_ANDROID_VC:-21}"
+bash scripts/release.sh stamp "$CUR_IOS" "$CUR_VC" 1.0.1 >/dev/null
+set_policy appVersion
 bash scripts/ota-stamp-release.sh >/dev/null
-echo "✅ fleet repair complete — app.json restored to 98/20 v1.0.1"
+echo "✅ fleet repair complete — app.json restored to $CUR_IOS/$CUR_VC v1.0.1 (appVersion policy)"
