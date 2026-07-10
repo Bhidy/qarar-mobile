@@ -650,11 +650,11 @@ export default function LoginScreen() {
                       { color: BRAND.ink2, fontFamily: ff("500"), textAlign: isAr ? "right" : "left" },
                     ]}>
                       {T("I agree to the ", "أوافق على ")}
-                      <Text onPress={() => Linking.openURL("https://mubashersignals.com/terms")} style={{ color: BRAND.primary, fontFamily: ff("800") }}>
+                      <Text onPress={() => Linking.openURL(`https://mubashersignals.com/terms?lang=${isAr ? "ar" : "en"}`)} style={{ color: BRAND.primary, fontFamily: ff("800") }}>
                         {T("Terms", "الشروط")}
                       </Text>
                       {T(" and ", " و")}
-                      <Text onPress={() => Linking.openURL("https://mubashersignals.com/privacy")} style={{ color: BRAND.primary, fontFamily: ff("800") }}>
+                      <Text onPress={() => Linking.openURL(`https://mubashersignals.com/privacy?lang=${isAr ? "ar" : "en"}`)} style={{ color: BRAND.primary, fontFamily: ff("800") }}>
                         {T("Privacy Policy", "سياسة الخصوصية")}
                       </Text>
                     </Text>
