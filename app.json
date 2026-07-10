@@ -31,7 +31,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rumble.pro",
-      "buildNumber": "95",
+      "buildNumber": "96",
       "appleTeamId": "7F4FTZQ5H7",
       "infoPlist": {
         "UIStatusBarStyle": "UIStatusBarStyleLightContent",
