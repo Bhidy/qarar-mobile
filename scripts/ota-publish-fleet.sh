@@ -116,7 +116,10 @@ j.expo.ios.buildNumber = String(t.iosBuild);
 j.expo.android.versionCode = Number(t.androidVc);
 fs.writeFileSync("app.json", JSON.stringify(j, null, 2) + "\n");
 NODE
+  # --environment is CLI-mandatory in --non-interactive mode even though
+  # --skip-bundler means no bundling happens (env was baked at export time).
   if ! npx eas-cli update --branch "$CHANNEL" --skip-bundler --input-dir "$DIST" \
+        --environment production \
         --message "$MESSAGE [$LABEL]" --non-interactive >/tmp/_fleet_pub_$i.log 2>&1; then
     tail -12 "/tmp/_fleet_pub_$i.log"
     FAILED="$FAILED [$LABEL]"
