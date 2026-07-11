@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# OTA publish — the ONLY sanctioned way to ship an over-the-air JS/asset update.
+# OTA publish — single-runtime publish (staging / current-train only).
+#
+# ⚠ PRODUCTION FLEET RULE (2026-07-11): the installed fleet spans MULTIPLE
+#   runtimes; this script only reaches the ONE runtime matching app.json's
+#   current stamps. To ship a fix to ALL production users, use:
+#       bash scripts/ota-publish-fleet.sh "message"
+#   (build-once / promote-everywhere / hash-attested delivery.)
 #
 #   usage:  bash scripts/ota-publish.sh <staging|production> ["update message"]
 #

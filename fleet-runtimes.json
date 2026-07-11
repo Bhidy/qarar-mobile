@@ -1,0 +1,66 @@
+{
+  "_comment": "Registry of EVERY runtime live in the installed fleet. scripts/ota-publish-fleet.sh publishes ONE verified bundle to each tuple and then attests delivery against `expect` (the runtime strings binaries actually request — from `eas update:list`). MAINTENANCE: add the new tuple when a store release ships; remove tuples only when store-forced upgrades retire those binaries. appVersion tuples expect the version string itself; fingerprint tuples (legacy builds 94-97/vc16-19) expect per-platform fingerprint hashes.",
+  "channel": "production",
+  "tuples": [
+    {
+      "label": "v1.0.2 current train (iOS 101 / vc23)",
+      "policy": "appVersion",
+      "version": "1.0.2",
+      "iosBuild": "101",
+      "androidVc": 23,
+      "expect": { "ios": "1.0.2", "android": "1.0.2" }
+    },
+    {
+      "label": "v1.0.1 stable runtime (iOS 99-100 / vc21-22)",
+      "policy": "appVersion",
+      "version": "1.0.1",
+      "iosBuild": "100",
+      "androidVc": 22,
+      "expect": { "ios": "1.0.1", "android": "1.0.1" }
+    },
+    {
+      "label": "v1.0.1 iOS 97 / vc19 (App Store LIVE)",
+      "policy": "fingerprint",
+      "version": "1.0.1",
+      "iosBuild": "97",
+      "androidVc": 19,
+      "expect": {
+        "ios": "d3e4cada242dbe34f4f049bc3afa1b4a1def68d9",
+        "android": "f8dd5fd5a8419fb6e1492e5f6abe75474f04bd84"
+      }
+    },
+    {
+      "label": "v1.0.1 iOS 96 / vc18",
+      "policy": "fingerprint",
+      "version": "1.0.1",
+      "iosBuild": "96",
+      "androidVc": 18,
+      "expect": {
+        "ios": "d3f816384be0cbd64ca29a7e9bf4bf77ad849ce4",
+        "android": "df18724950c91b0e4a59da12c42625715c3048ec"
+      }
+    },
+    {
+      "label": "v1.0.1 iOS 95 / vc17",
+      "policy": "fingerprint",
+      "version": "1.0.1",
+      "iosBuild": "95",
+      "androidVc": 17,
+      "expect": {
+        "ios": "ec1e9d69a97fdcfaaf0f8720777632598e746992",
+        "android": "2719e5a2207d9f20036b826690b318986d03456a"
+      }
+    },
+    {
+      "label": "v1.0.0 iOS 94 / vc16 (first App Store build)",
+      "policy": "fingerprint",
+      "version": "1.0.0",
+      "iosBuild": "94",
+      "androidVc": 16,
+      "expect": {
+        "ios": "611d526d4dd5e50965acd6f9d53f14574a70d7da",
+        "android": "18234abbc035187465238e645e3478b4299e46f6"
+      }
+    }
+  ]
+}

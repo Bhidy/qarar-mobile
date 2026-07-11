@@ -426,7 +426,7 @@ export const NOTIFICATIONS: Notification[] = [
   {
     id: "notif7", date: "17 May 26", time: "08:45 am",
     title: "BUY SUGR",
-    titleAr: "اشترِ SUGR",
+    titleAr: "شراء SUGR",
     subtitle: "Buy between EGP 49 – 50.5. Target: EGP 73.50.",
     subtitleAr: "اشترِ بين 49 – 50.5 ج.م. الهدف: 73.50 ج.م.",
     type: "signal-buy", ticker: "SUGR", read: true,
@@ -446,7 +446,7 @@ export const NOTIFICATIONS: Notification[] = [
   {
     id: "notif10", date: "14 May 26", time: "11:30 am",
     title: "TAKE PROFIT EGCH",
-    titleAr: "اجنِ الأرباح EGCH",
+    titleAr: "جني أرباح EGCH",
     subtitle: "Sell 25% of position. Current Price: EGP 14.35.",
     subtitleAr: "بيع 25% من المركز. السعر الحالي: 14.35 ج.م.",
     type: "signal-take-profit", ticker: "EGCH", read: true,
@@ -462,7 +462,7 @@ export const NOTIFICATIONS: Notification[] = [
   {
     id: "notif12", date: "13 May 26",
     title: "BUY EHDR",
-    titleAr: "اشترِ EHDR",
+    titleAr: "شراء EHDR",
     subtitle: "Buy between EGP 2.30 – 2.37. Target: EGP 3.20.",
     subtitleAr: "اشترِ بين 2.30 – 2.37 ج.م. الهدف: 3.20 ج.م.",
     type: "signal-buy", ticker: "EHDR", read: true,

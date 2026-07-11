@@ -1,6 +1,7 @@
 node_modules/
 .expo/
 dist/
+dist-fleet/
 web-build/
 
 # Compiled app / build outputs — never commit binaries or logs.

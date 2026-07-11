@@ -20,6 +20,13 @@
 # per tuple, then restores. Retire it once the store fleet is ≥99/vc21.
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
+# ── DEPRECATED (2026-07-11) ──────────────────────────────────────────────────
+# Superseded by scripts/ota-publish-fleet.sh (build-once / promote-everywhere /
+# hash-attested). This script re-bundles per tuple (non-deterministic bytes) and
+# its restore step hardcodes v1.0.1/99/21 — WRONG for any later release train.
+echo "❌ DEPRECATED: use  bash scripts/ota-publish-fleet.sh \"message\"  instead." >&2
+exit 1
+
 cd "$(dirname "$0")/.."
 
 set_policy() { # set_policy fingerprint|appVersion

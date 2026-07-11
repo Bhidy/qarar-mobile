@@ -10,6 +10,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import * as Updates from "expo-updates";
 import { useAuth } from "@/context/AuthContext";
 import { uploadAvatar, supabase } from "@/lib/supabase";
 import {
@@ -505,6 +506,14 @@ export default function ProfileScreen() {
         <Text style={[styles.version, { color: C.text.muted }]}>
           {`Smart Signals v${Constants.expoConfig?.version ?? "1.0.0"} · Build ${Constants.expoConfig?.ios?.buildNumber ?? "—"} · Powered by Mubasher`}
         </Text>
+        {/* OTA bundle identity — instant "which JS is this device running?" check.
+            "embedded" = factory bundle from the store binary; otherwise the short
+            EAS update id + its publish timestamp. */}
+        <Text style={[styles.bundleId, { color: C.text.muted }]}>
+          {Updates.updateId
+            ? `Bundle ${Updates.updateId.slice(0, 8)}${Updates.createdAt ? ` · ${new Date(Updates.createdAt).toISOString().slice(0, 16).replace("T", " ")} UTC` : ""}`
+            : "Bundle: embedded"}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -543,4 +552,5 @@ const styles = StyleSheet.create({
   accentRow:       { flexDirection: "row", gap: 10, alignItems: "center" },
   accentDot:       { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   version:         { textAlign: "center", fontSize: 11, marginTop: 8 },
+  bundleId:        { textAlign: "center", fontSize: 10, marginTop: 2, opacity: 0.7 },
 });

@@ -30,6 +30,11 @@ import * as Updates from "expo-updates";
 // Don't re-check more often than this when the app is foregrounded repeatedly.
 const MIN_CHECK_INTERVAL_MS = 60_000;
 
+// If a launch-triggered download completes within this window of app start, apply
+// it immediately (one clean reload) instead of waiting for the NEXT cold start.
+// Past the window the user is already mid-session → defer to next cold start.
+const LAUNCH_APPLY_WINDOW_MS = 8_000;
+
 function log(msg: string, extra?: unknown) {
   if (extra !== undefined) console.log(`[OTA] ${msg}`, extra);
   else console.log(`[OTA] ${msg}`);
@@ -38,6 +43,7 @@ function log(msg: string, extra?: unknown) {
 export function OTAUpdates() {
   const checking = useRef(false);
   const lastCheck = useRef(0);
+  const launchedAt = useRef(Date.now());
 
   useEffect(() => {
     // Disabled in dev / Expo Go / when updates aren't configured. No-op, no logs spam.
@@ -73,8 +79,16 @@ export function OTAUpdates() {
         const fetched = await Updates.fetchUpdateAsync();
         if (cancelled) return;
         if (fetched.isNew) {
-          // Intentionally do NOT reloadAsync() here — applying mid-session could
-          // interrupt the user. expo-updates applies this on the next cold start.
+          const sinceLaunch = Date.now() - launchedAt.current;
+          if (trigger === "launch" && sinceLaunch < LAUNCH_APPLY_WINDOW_MS) {
+            // Fresh cold start and the download beat the apply window → apply NOW
+            // (one clean reload) so users see fixes on the FIRST launch after a
+            // publish, not the second. Mid-session (foreground checks or slow
+            // downloads) still defers to the next cold start — never interrupts.
+            log(`update downloaded ✓ — applying now (${sinceLaunch}ms after launch)`);
+            await Updates.reloadAsync();
+            return;
+          }
           log("update downloaded ✓ — will apply on next app restart");
         } else {
           log("fetch returned no new update");
