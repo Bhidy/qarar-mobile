@@ -1,5 +1,5 @@
 {
-  "_comment": "Registry of EVERY runtime live in the installed fleet. scripts/ota-publish-fleet.sh publishes ONE verified bundle to each tuple and then attests delivery against `expect` (the runtime strings binaries actually request — from `eas update:list`). MAINTENANCE: add the new tuple when a store release ships; remove tuples only when store-forced upgrades retire those binaries. appVersion tuples expect the version string itself; fingerprint tuples (legacy builds 94-97/vc16-19) expect per-platform fingerprint hashes.",
+  "_comment": "Registry of EVERY runtime live in the installed fleet — the SOURCE OF TRUTH for OTA targeting. scripts/ota-publish-fleet.sh stamps each tuple's `expect` strings as explicit per-platform runtimeVersion values (never re-derives them from a policy — fingerprint recomputation drifts with any tree change), publishes ONE verified bundle per tuple, then attests that the CDN serves that exact bundle for every `expect` runtime. The `expect` strings are what installed binaries actually request (from `eas update:list` / build artifacts). MAINTENANCE: add the new tuple when a store release ships; remove tuples only when store-forced upgrades retire those binaries. `policy` and `version` fields are documentation of the tuple's origin.",
   "channel": "production",
   "tuples": [
     {

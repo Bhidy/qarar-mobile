@@ -110,8 +110,15 @@ for ((i=0; i<N_TUPLES; i++)); do
 const fs = require("fs");
 const t = require(`${process.cwd()}/${process.argv[2]}`).tuples[Number(process.argv[3])];
 const j = JSON.parse(fs.readFileSync("app.json", "utf8"));
+// Stamp the EXACT runtime strings the target binaries request (per platform),
+// straight from the registry. Never re-derive via a policy: fingerprint
+// recomputation drifts with ANY tree change (proven 2026-07-12 — four legacy
+// tuples published to freshly-computed hashes no live binary requests, caught
+// by attestation). Explicit strings make the registry the source of truth.
 j.expo.version = t.version;
-j.expo.runtimeVersion = { policy: t.policy };
+delete j.expo.runtimeVersion;
+j.expo.ios.runtimeVersion = t.expect.ios;
+j.expo.android.runtimeVersion = t.expect.android;
 j.expo.ios.buildNumber = String(t.iosBuild);
 j.expo.android.versionCode = Number(t.androidVc);
 fs.writeFileSync("app.json", JSON.stringify(j, null, 2) + "\n");
