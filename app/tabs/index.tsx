@@ -155,7 +155,7 @@ export default function HomeScreen() {
             <Pressable
               style={[styles.notifBtn, { backgroundColor: C.bg.elevated, borderColor: C.border.subtle }]}
               onPress={() => router.push("/tabs/inbox")}
-              accessibilityLabel={isAr ? "صندوق الإشعارات" : "Inbox"}
+              accessibilityLabel={isAr ? "الإشعارات" : "Inbox"}
             >
               <Ionicons name="notifications-outline" size={20} color={C.text.secondary} />
               {(() => {

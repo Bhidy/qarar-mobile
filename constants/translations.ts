@@ -12,7 +12,7 @@ const translations = {
     fundamental: { en: "Fundamental", ar: "الأساسي" },
     technical:   { en: "Technical",   ar: "التقني" },
     insights:    { en: "Insights",    ar: "رؤى" },
-    inbox:       { en: "Inbox",       ar: "الصندوق" },
+    inbox:       { en: "Inbox",       ar: "الإشعارات" },
   },
 
   // ── Home ─────────────────────────────────────────────────────────
@@ -40,9 +40,9 @@ const translations = {
     pastPerf:       { en: "Past Performance",    ar: "الأداء السابق" },
     invest:         { en: "Invest",              ar: "استثمر" },
     hold:           { en: "Hold",                ar: "احتفظ" },
-    buy:            { en: "Buy",                 ar: "اشترِ" },
+    buy:            { en: "Buy",                 ar: "شراء" },
     sell:           { en: "Sell",                ar: "بع" },
-    takeProfit:     { en: "Take Profit",         ar: "اجنِ الأرباح" },
+    takeProfit:     { en: "Take Profit",         ar: "جني أرباح" },
     remaining:      { en: "Remaining",           ar: "المتبقي" },
     targetPrice:    { en: "Target Price",        ar: "السعر المستهدف" },
     currentPrice:   { en: "Current Price",       ar: "السعر الحالي" },
@@ -77,7 +77,7 @@ const translations = {
 
   // ── Inbox ────────────────────────────────────────────────────────
   inbox: {
-    title:      { en: "Inbox",            ar: "الصندوق" },
+    title:      { en: "Inbox",            ar: "الإشعارات" },
     subtitle:   { en: "All your signals, reports & updates", ar: "توصياتك وتقاريرك وتحديثاتك" },
     all:        { en: "All",              ar: "الكل" },
     signals:    { en: "Signals",          ar: "إشارات" },

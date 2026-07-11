@@ -51,10 +51,10 @@ function NotifItem({ item, C, isRTL, isAr, fontFamily, onRead }: {
   const iconConfig: Record<NotifType, { icon: keyof typeof Ionicons.glyphMap; color: string; bg: string; label: string; labelAr: string }> = {
     article:              { icon: "document-text-outline", color: C.text.secondary, bg: C.bg.elevated, label: "Report",       labelAr: "تقرير" },
     "signal-invest":      { icon: "trending-up",           color: "#fff",           bg: C.primary,     label: "Invest",       labelAr: "استثمر" },
-    "signal-buy":         { icon: "trending-up",           color: C.primary,        bg: `${C.primary}18`, label: "Buy",       labelAr: "اشترِ" },
+    "signal-buy":         { icon: "trending-up",           color: C.primary,        bg: `${C.primary}18`, label: "Buy",       labelAr: "شراء" },
     "signal-sell":        { icon: "trending-down",         color: C.accent.red,     bg: `${C.accent.red}18`, label: "Sell",   labelAr: "بيع" },
     "signal-hold":        { icon: "remove",                color: C.accent.gold,    bg: `${C.accent.gold}18`, label: "Hold",  labelAr: "احتفظ" },
-    "signal-take-profit": { icon: "flag",                  color: C.accent.teal,    bg: `${C.accent.teal}18`, label: "Take Profit", labelAr: "اجنِ الأرباح" },
+    "signal-take-profit": { icon: "flag",                  color: C.accent.teal,    bg: `${C.accent.teal}18`, label: "Take Profit", labelAr: "جني أرباح" },
     "signal-target":      { icon: "refresh",               color: C.primary,        bg: `${C.primary}18`, label: "TP Update", labelAr: "تحديث الهدف" },
     live:                 { icon: "radio",                 color: "#fff",           bg: C.accent.red,  label: "Live",         labelAr: "مباشر" },
     portfolio:            { icon: "briefcase-outline",     color: C.accent.gold,    bg: `${C.accent.gold}18`, label: "Portfolio", labelAr: "محفظة" },
@@ -232,7 +232,7 @@ export default function InboxScreen() {
           </View>
           <View>
             <Text style={[styles.headerTitle, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>
-              {isAr ? "الصندوق" : "Inbox"}
+              {isAr ? "الإشعارات" : "Inbox"}
             </Text>
             <Text style={[styles.headerSubtitle, { color: C.text.muted, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}>
               {isAr ? "إشاراتك وتقاريرك وتحديثاتك" : "Signals, reports & updates"}
