@@ -2,7 +2,7 @@
   "expo": {
     "name": "Smart Signals",
     "slug": "rumble-pro",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -31,7 +31,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rumble.pro",
-      "buildNumber": "101",
+      "buildNumber": "102",
       "appleTeamId": "7F4FTZQ5H7",
       "usesAppleSignIn": true,
       "infoPlist": {
@@ -48,7 +48,7 @@
         "backgroundColor": "#0A0E1F"
       },
       "package": "com.rumble.pro",
-      "versionCode": 23,
+      "versionCode": 24,
       "googleServicesFile": "./google-services.json",
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
