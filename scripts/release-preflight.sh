@@ -5,7 +5,7 @@
 # Enforces the release invariants that repeatedly broke us:
 #   1. CLEAN TREE   — no release ever builds from uncommitted state again
 #                     (build 94 shipped from a dirty tree; untraceable in git).
-#   2. NO FORBIDDEN DEPS — marketplace/subscription/social-login must never
+#   2. NO FORBIDDEN DEPS — marketplace/subscription + native Google SDK must never
 #                     return to mobile (owner rule + App Store Guideline 4.8).
 #   3. TRUTH FROM THE STORE — prints the authoritative next iOS build number
 #                     from the App Store Connect API (never a stale comment).
@@ -39,12 +39,18 @@ fi
 ok "git tree clean (HEAD $(git rev-parse --short HEAD))"
 
 # 2. Forbidden dependencies — package.json + Podfile.lock + filesystem ghosts.
-FORBIDDEN='react-native-purchases|revenuecat|@react-native-google-signin|expo-apple-authentication|GoogleSignIn|AppAuth'
-if grep -qiE "$FORBIDDEN" package.json; then fail "forbidden dependency in package.json (marketplace/social-login must never return)"; fi
+# Social login is now SUPPORTED, but ONLY the compliant way: native
+# expo-apple-authentication (Apple's own framework) + system-browser Google via
+# expo-web-browser. The native Google SDK + its AppAuth pod (the 2026-07
+# Guideline-4.8 rejection root cause) and RevenueCat/marketplace stay banned.
+# The Podfile.lock check below is the real teeth: ExpoAppleAuthentication does
+# NOT match AppAuth/GoogleSignIn, so it passes; the forbidden pods cannot.
+FORBIDDEN='react-native-purchases|revenuecat|@react-native-google-signin|react-native-app-auth|@invertase/react-native-apple-authentication'
+if grep -qiE "$FORBIDDEN" package.json; then fail "forbidden dependency in package.json (native Google SDK / AppAuth / RevenueCat must never return)"; fi
 if [ -f ios/Podfile.lock ] && grep -qiE "AppAuth|GoogleSignIn|RevenueCat|PurchasesHybridCommon" ios/Podfile.lock; then
   fail "forbidden pod in Podfile.lock — run a clean 'pod install' (see ios-stale-googlesignin-pods post-mortem)"
 fi
-ok "no forbidden deps (payments/social-login) in package.json or Podfile.lock"
+ok "no forbidden deps (native Google SDK / payments) in package.json or Podfile.lock"
 for ghost in app/marketplace lib/marketplace components/marketplace context/MarketplaceContext.tsx plugins/with-ios-modular-headers.js; do
   [ -e "$ghost" ] && fail "marketplace/compliance ghost present: $ghost (must stay deleted)"
 done
