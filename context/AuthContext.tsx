@@ -1,18 +1,53 @@
 /**
  * Mobile auth state (SmartSignals).
- * Supabase Auth — email + password + 6-digit email OTP ONLY. No third-party /
- * social login (Google, Apple) is offered, so App Store Guideline 4.8 (which
- * only mandates Sign in with Apple when other social logins exist) does not
- * apply. The app is a fully-free product: every registered user has complete
- * access. There is no subscription, payment, entitlement, or in-app-purchase
- * layer — access is simply "signed in or not".
+ * Supabase Auth — email/password, 6-digit email OTP, and social login:
+ *   • Sign in with Apple — native sheet (expo-apple-authentication, Apple's own
+ *     AuthenticationServices framework) → supabase.auth.signInWithIdToken with a
+ *     SHA-256 nonce. iOS only. Required by App Store Guideline 4.8 because we
+ *     also offer Google.
+ *   • Google — system-browser OAuth (ASWebAuthenticationSession / Custom Tabs
+ *     via expo-web-browser) → deep link rumblepro://auth/callback → PKCE
+ *     exchangeCodeForSession. Deliberately NO native Google SDK: the stale
+ *     GoogleSignIn/AppAuth pods were the root cause of the 2026-07 App Store
+ *     rejection risk (see setup/LESSONS_LEARNED.md) and must never return.
+ * The app is a fully-free product: every registered user has complete access.
  */
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import { Platform } from "react-native";
 import type { Session, User } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
+import * as Crypto from "expo-crypto";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { supabase, SUPABASE_AUTH_STORAGE_KEY } from "@/lib/supabase";
 import { useTheme } from "@/context/ThemeContext";
 import { WEB_BASE } from "@/constants/site";
+
+/**
+ * OAuth deep-link target. Must stay inside Supabase's URI allow list
+ * (rumblepro://auth/callback) — change both together or the provider flow
+ * dies with "redirect_to not allowed".
+ */
+export const OAUTH_REDIRECT_URL = Linking.createURL("auth/callback");
+
+/**
+ * PKCE auth codes are single-use. On Android the redirect can be delivered
+ * TWICE (openAuthSessionAsync resolves AND the OS fires the deep link into
+ * expo-router). Whoever gets there first wins; the second attempt must be a
+ * no-op, not a scary error. Module-level so the login screen and the
+ * /auth/callback route share one guard.
+ */
+const consumedAuthCodes = new Set<string>();
+export async function exchangeAuthCode(code: string): Promise<{ error?: string; skipped?: boolean }> {
+  if (!supabase) return { error: "Auth not configured" };
+  if (consumedAuthCodes.has(code)) return { skipped: true };
+  consumedAuthCodes.add(code);
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) return { error: error.message };
+  supabase.auth.startAutoRefresh(); // in case a soft sign-out stopped it
+  return {};
+}
 
 /**
  * Biometric session vault — lets "Sign in with Face ID / Touch ID" work AFTER an
@@ -42,6 +77,10 @@ interface AuthValue {
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error?: string }>;
   sendOtp: (email: string) => Promise<{ error?: string }>;
   verifyOtp: (email: string, token: string) => Promise<{ error?: string }>;
+  /** Native Sign in with Apple (iOS only). `canceled` = user dismissed the sheet — show nothing. */
+  signInWithApple: () => Promise<{ error?: string; canceled?: boolean }>;
+  /** Google via the system browser + deep link. `canceled` = user closed the browser — show nothing. */
+  signInWithGoogle: () => Promise<{ error?: string; canceled?: boolean }>;
   signOut: () => Promise<void>;
   /** Rebuild a session from the biometric vault (post-sign-out Face ID login). */
   restoreBiometricSession: () => Promise<{ error?: string }>;
@@ -59,7 +98,9 @@ const AuthContext = createContext<AuthValue>({
   user: null, session: null, loading: true, accessToken: null,
   signInWithPassword: async () => ({}),
   signUp: async () => ({}), sendOtp: async () => ({}),
-  verifyOtp: async () => ({}), signOut: async () => {},
+  verifyOtp: async () => ({}),
+  signInWithApple: async () => ({}), signInWithGoogle: async () => ({}),
+  signOut: async () => {},
   restoreBiometricSession: async () => ({}),
   resetPassword: async () => ({}), verifyResetOtp: async () => ({}), updatePassword: async () => ({}),
   updateEmail: async () => ({}), updateFullName: async () => ({}), updatePhone: async () => ({}),
@@ -134,6 +175,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return { error: "Auth not configured" };
     const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
     return error ? err(error) : {};
+  }, []);
+
+  /**
+   * Native Sign in with Apple → Supabase signInWithIdToken.
+   * Nonce: Apple receives SHA256(rawNonce); Supabase receives rawNonce and
+   * verifies the hash embedded in the identity token — replay protection.
+   * Apple only provides the user's name on the FIRST authorization, so it is
+   * persisted to user_metadata immediately or it is lost forever.
+   */
+  const signInWithApple = useCallback(async (): Promise<{ error?: string; canceled?: boolean }> => {
+    if (!supabase) return { error: "Auth not configured" };
+    if (Platform.OS !== "ios") return { error: "Apple Sign-In is only available on iOS" };
+    try {
+      const rawNonce = Crypto.randomUUID();
+      const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+        nonce: hashedNonce,
+      });
+      if (!credential.identityToken) return { error: "Apple did not return an identity token" };
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: "apple",
+        token: credential.identityToken,
+        nonce: rawNonce,
+      });
+      if (error) return err(error);
+      supabase.auth.startAutoRefresh();
+      // First-auth-only name capture (best-effort; the session is already live).
+      const given = credential.fullName?.givenName ?? "";
+      const family = credential.fullName?.familyName ?? "";
+      const fullName = `${given} ${family}`.trim();
+      if (fullName && !data.user?.user_metadata?.full_name) {
+        supabase.auth.updateUser({ data: { full_name: fullName } }).catch(() => { /* best-effort */ });
+      }
+      return {};
+    } catch (e: any) {
+      if (e?.code === "ERR_REQUEST_CANCELED") return { canceled: true };
+      return { error: e?.message || "Apple sign-in failed" };
+    }
+  }, []);
+
+  /**
+   * Google via the SYSTEM browser (ASWebAuthenticationSession on iOS, Custom
+   * Tabs on Android) — Google forbids OAuth inside embedded webviews, and this
+   * path needs no native Google SDK (see header comment). PKCE: the code
+   * verifier is written to AsyncStorage by signInWithOAuth and consumed by
+   * exchangeAuthCode.
+   */
+  const signInWithGoogle = useCallback(async (): Promise<{ error?: string; canceled?: boolean }> => {
+    if (!supabase) return { error: "Auth not configured" };
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: OAUTH_REDIRECT_URL, skipBrowserRedirect: true },
+      });
+      if (error) return err(error);
+      if (!data?.url) return { error: "Could not start Google sign-in" };
+      const result = await WebBrowser.openAuthSessionAsync(data.url, OAUTH_REDIRECT_URL);
+      if (result.type !== "success" || !result.url) {
+        // cancel / dismiss — Android may still deliver the deep link, which the
+        // /auth/callback route handles idempotently.
+        return { canceled: true };
+      }
+      // expo-linking's parser (RN's own URL polyfill lacks searchParams on some runtimes).
+      const q = Linking.parse(result.url).queryParams ?? {};
+      const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
+      const oauthError = first(q.error_description) ?? first(q.error);
+      if (oauthError) return { error: String(oauthError) };
+      const code = first(q.code);
+      if (!code) return { error: "No auth code returned" };
+      const exchanged = await exchangeAuthCode(code);
+      if (exchanged.error) return { error: exchanged.error };
+      return {};
+    } catch (e: any) {
+      return { error: e?.message || "Google sign-in failed" };
+    }
   }, []);
 
   const signOut = useCallback(async () => {
@@ -272,7 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user, session, loading, accessToken: session?.access_token ?? null,
       signInWithPassword,
-      signUp, sendOtp, verifyOtp, signOut, restoreBiometricSession,
+      signUp, sendOtp, verifyOtp, signInWithApple, signInWithGoogle, signOut, restoreBiometricSession,
       resetPassword, verifyResetOtp, updatePassword, updateEmail, updateFullName, updatePhone, deleteAccount,
     }}>
       {children}
