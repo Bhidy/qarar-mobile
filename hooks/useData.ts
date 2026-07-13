@@ -691,10 +691,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // frontend. Rows with no flag (null/undefined — legacy or Mubasher feed) count
       // as published, so nothing already-live disappears.
       const isPub = (r: any) => r?.published !== false;
-      const pubArticles = (articles ?? []).filter(isPub);
-      const pubFund     = (fundCalls ?? []).filter(isPub);
-      const pubTech     = (techCalls ?? []).filter(isPub);
-      const pubNews     = (newsRows ?? []).filter(isPub);
+      // `createdBy` is the ADMIN-INTERNAL ownership stamp (admin console analyst
+      // scoping) — never app data. Strip it at the fetch boundary so it doesn't
+      // ride into app state or the AsyncStorage cache.
+      const stripOwner = (rows: any[] | null | undefined) => (rows ?? []).map(({ createdBy: _internal, ...r }: any) => r);
+      const pubArticles = stripOwner(articles).filter(isPub);
+      const pubFund     = stripOwner(fundCalls).filter(isPub);
+      const pubTech     = stripOwner(techCalls).filter(isPub);
+      const pubNews     = stripOwner(newsRows).filter(isPub);
 
       const egxArticles   = pubArticles.filter((a: any) => !a.market || a.market === "egypt" || a.market === "both" || a.market === "commodities");
       const saudiArticles = pubArticles.filter((a: any) => a.market === "saudi" || a.market === "both" || a.market === "commodities");
@@ -713,9 +717,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       // Technical Articles — published, normalized, all markets (the screen filters by
       // the active market with a "both"-tolerant check).
-      const techArticles = (techArticleRows ?? []).filter(isPub).map(toTechnicalArticle);
-      const fundArticles = (fundArticleRows ?? []).filter(isPub).map(toFundamentalArticle);
-      const indexUpdates = (indexUpdateRows ?? []).filter(isPub).map(toIndexUpdate);
+      const techArticles = stripOwner(techArticleRows).filter(isPub).map(toTechnicalArticle);
+      const fundArticles = stripOwner(fundArticleRows).filter(isPub).map(toFundamentalArticle);
+      const indexUpdates = stripOwner(indexUpdateRows).filter(isPub).map(toIndexUpdate);
 
       commit({
         ARTICLES:          egxArticles.length   > 0 ? egxArticles.map(toArticle)          : mk(STATIC_ARTICLES, []),
