@@ -29,7 +29,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -235,6 +235,13 @@ export default function LoginScreen() {
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState<"faceID" | "touchID" | null>(null);
   const [socialBusy, setSocialBusy] = useState<"apple" | "google" | null>(null);
+  // Surface an OAuth failure forwarded by the deep-link callback route (the
+  // Android pure-deep-link path where this screen's own browser promise never ran).
+  const { authError } = useLocalSearchParams<{ authError?: string }>();
+  useEffect(() => {
+    if (authError) setErrors({ general: localizeAuthError(String(authError), isAr) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authError]);
 
   const strength = calcPasswordStrength(password);
 
@@ -370,6 +377,7 @@ export default function LoginScreen() {
   }
 
   async function submit() {
+    if (busy || socialBusy) return; // don't let the email CTA fire mid social sign-in
     const errs = validateForm();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
@@ -853,7 +861,7 @@ export default function LoginScreen() {
                 {/* Primary CTA */}
                 <Pressable
                   onPress={submit}
-                  disabled={busy}
+                  disabled={busy || socialBusy !== null}
                   style={({ pressed }) => [
                     s.cta,
                     {

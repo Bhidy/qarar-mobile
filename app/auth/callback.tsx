@@ -22,17 +22,20 @@ export default function AuthCallbackRoute() {
     let mounted = true;
     (async () => {
       const code = typeof params.code === "string" ? params.code : undefined;
-      const oauthError = params.error_description ?? params.error;
+      const oauthError = (params.error_description ?? params.error) as string | undefined;
 
       if (oauthError || !code) {
-        // Cancelled/failed leg — return to the login screen; it owns messaging.
-        if (mounted) router.replace("/login");
+        // Cancelled/failed provider leg. Forward the reason so the login screen
+        // can surface it via localizeAuthError — on the Android pure-deep-link
+        // path the login screen's own browser promise never ran, so without
+        // this the failure would be silent. A bare cancel carries no message.
+        if (mounted) router.replace(oauthError ? { pathname: "/login", params: { authError: oauthError } } : "/login");
         return;
       }
       const result = await exchangeAuthCode(code);
       if (!mounted) return;
       if (result.error) {
-        router.replace("/login");
+        router.replace({ pathname: "/login", params: { authError: result.error } });
         return;
       }
       // Success (or already exchanged by the login screen's browser promise).

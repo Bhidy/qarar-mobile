@@ -34,19 +34,32 @@ export const OAUTH_REDIRECT_URL = Linking.createURL("auth/callback");
 /**
  * PKCE auth codes are single-use. On Android the redirect can be delivered
  * TWICE (openAuthSessionAsync resolves AND the OS fires the deep link into
- * expo-router). Whoever gets there first wins; the second attempt must be a
- * no-op, not a scary error. Module-level so the login screen and the
- * /auth/callback route share one guard.
+ * expo-router). Both legs must resolve to the SAME real outcome — not "whoever
+ * arrives second assumes success". We therefore de-dupe by SHARING the in-flight
+ * exchange promise keyed on the code: the second caller awaits the exact same
+ * exchangeCodeForSession result the first caller got. On failure the entry is
+ * deleted so a legitimate retry (fresh code) isn't permanently poisoned, and
+ * — critically — the losing leg receives the real error and routes to /login
+ * instead of navigating to an authenticated screen with no session.
+ * Module-level so the login screen and the /auth/callback route share it.
  */
-const consumedAuthCodes = new Set<string>();
-export async function exchangeAuthCode(code: string): Promise<{ error?: string; skipped?: boolean }> {
-  if (!supabase) return { error: "Auth not configured" };
-  if (consumedAuthCodes.has(code)) return { skipped: true };
-  consumedAuthCodes.add(code);
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return { error: error.message };
-  supabase.auth.startAutoRefresh(); // in case a soft sign-out stopped it
-  return {};
+const inflightExchanges = new Map<string, Promise<{ error?: string }>>();
+export function exchangeAuthCode(code: string): Promise<{ error?: string }> {
+  if (!supabase) return Promise.resolve({ error: "Auth not configured" });
+  const existing = inflightExchanges.get(code);
+  if (existing) return existing; // 2nd delivery awaits the SAME real exchange
+  const client = supabase;
+  const p = (async () => {
+    const { error } = await client.auth.exchangeCodeForSession(code);
+    if (error) {
+      inflightExchanges.delete(code); // allow a genuine retry; don't poison forever
+      return { error: error.message };
+    }
+    client.auth.startAutoRefresh(); // in case a soft sign-out stopped it
+    return {};
+  })();
+  inflightExchanges.set(code, p);
+  return p;
 }
 
 /**

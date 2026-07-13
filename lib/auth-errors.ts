@@ -13,7 +13,8 @@ const MAP: Array<{ match: RegExp; ar: string; en?: string }> = [
   // OAuth (Google / Apple) failure legs. These carry an `en` override because
   // the raw provider strings ("access_denied") are not user-readable either.
   {
-    match: /access_denied|user (canceled|cancelled)|consent.*denied/i,
+    // Google → access_denied; Apple web → user_cancelled_authorize (underscore form).
+    match: /access_denied|user[_\s-]?cancell?ed|consent.*denied|cancell?ed/i,
     ar: "تم إلغاء تسجيل الدخول — يمكنك المحاولة مرة أخرى متى شئت.",
     en: "Sign-in was canceled — you can try again anytime.",
   },
