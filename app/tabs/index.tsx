@@ -110,10 +110,16 @@ export default function HomeScreen() {
   const avgReturnStr = fmtPct(avgReturnNum, 1, true);
   // Language rule (matches web): Arabic mode → Arabic news only; English mode → English only.
   const isArabicText = (s?: string | null) => !!s && /[؀-ۿ]/.test(s);
-  const newsData = (isUsa ? USA_NEWS : isSaudi ? SAUDI_NEWS : NEWS).filter((n: any) => {
+  const newsPool = (isUsa ? USA_NEWS : isSaudi ? SAUDI_NEWS : NEWS);
+  const newsPrimary = newsPool.filter((n: any) => {
     const arabicNative = isArabicText(n.title);
     return isAr ? (arabicNative || !!n.titleAr?.trim()) : !arabicNative;
   });
+  // Fallback: Arabic-only markets (Egypt) show their Arabic news to English users
+  // instead of an empty section. Matches web filterNewsForLanguage.
+  const newsData = (!isAr && newsPrimary.length === 0 && newsPool.length > 0)
+    ? newsPool.filter((n: any) => isArabicText(n.title) || !!n.titleAr?.trim())
+    : newsPrimary;
   const indexLabel = isUsa ? "S&P 500" : isSaudi ? (isAr ? "تداول" : "Tadawul") : (isAr ? "مؤشر EGX 30" : "EGX 30");
 
   return (

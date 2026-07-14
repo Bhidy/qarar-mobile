@@ -69,10 +69,16 @@ export default function InsightsScreen() {
   // Language rule (matches web): Arabic mode → Arabic news only; English mode → English only.
   // Classify by the headline's actual script — the DB `lang` column is unreliable.
   const isArabicText = (s?: string | null) => !!s && /[؀-ۿ]/.test(s);
-  const newsAll = (isUsa ? USA_NEWS : isSaudi ? SAUDI_NEWS : NEWS).filter((n: any) => {
+  const newsPool = (isUsa ? USA_NEWS : isSaudi ? SAUDI_NEWS : NEWS);
+  const newsPrimary = newsPool.filter((n: any) => {
     const arabicNative = isArabicText(n.title);
     return isAr ? (arabicNative || !!n.titleAr?.trim()) : !arabicNative;
   });
+  // Fallback: Arabic-only markets (Egypt) show their Arabic news to English users
+  // instead of an empty section. Matches web filterNewsForLanguage.
+  const newsAll = (!isAr && newsPrimary.length === 0 && newsPool.length > 0)
+    ? newsPool.filter((n: any) => isArabicText(n.title) || !!n.titleAr?.trim())
+    : newsPrimary;
   // Show at most 5 here; the full list lives on /news ("View All").
   const newsData = newsAll.slice(0, 5);
 

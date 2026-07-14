@@ -38,13 +38,20 @@ export default function NewsTabScreen() {
   //    AR mode requires real Arabic script, EN mode rejects any Arabic script.
   //    Empty titles are dropped defensively.
   const langFiltered = useMemo(() => {
-    return (isSaudi ? SAUDI_NEWS : NEWS).filter((n: any) => {
+    const pool = (isSaudi ? SAUDI_NEWS : NEWS);
+    const primary = pool.filter((n: any) => {
       const display = isAr
         ? String(n.titleAr ?? "").trim() || String(n.title ?? "").trim()
         : String(n.title ?? "").trim();
       if (!display) return false;
       return isAr ? isArabicText(display) : !isArabicText(display);
     });
+    // Graceful fallback: markets that publish news only in Arabic (e.g. Egypt)
+    // would otherwise show an English user an empty page — fall back to the
+    // available Arabic news. Matches web filterNewsForLanguage.
+    if (!isAr && primary.length === 0 && pool.length > 0)
+      return pool.filter((n: any) => isArabicText(String(n.titleAr ?? n.title ?? "")));
+    return primary;
   }, [NEWS, SAUDI_NEWS, isSaudi, isAr]);
 
   // 2. category + search filter — only the categories actually present this session
