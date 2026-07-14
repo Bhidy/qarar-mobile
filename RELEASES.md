@@ -20,3 +20,5 @@ Every store upload: version, commit, date, artifact. Appended by scripts/release
 | 2026-07-11 | Android | vc23 | 3aa6ded1 | Play PRODUCTION (v1.0.2 train, runtime-gated) |
 | 2026-07-14 | iOS | 102 | 0c625539 | TestFlight via build_testflight.sh |
 | 2026-07-14 | Android | vc24 | 0c625539 | Play internal via eas submit |
+| 2026-07-14 | iOS | 103 | 6d05097d | TestFlight via build_testflight.sh |
+| 2026-07-14 | Android | vc25 | 6d05097d | Play internal via eas submit |
