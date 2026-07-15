@@ -18,9 +18,6 @@ import Svg, {
   Defs, LinearGradient as SvgLinear, RadialGradient as SvgRadial, Stop,
   Rect, Line, Path, Circle, Ellipse, G, Text as SvgText, Pattern, Filter, FeGaussianBlur, FeMerge, FeMergeNode,
 } from "react-native-svg";
-import { TickerLogo } from "@/components/shared/TickerLogo";
-import { LOGO_SET } from "@/constants/logo-manifest";
-import { getLogoSvg } from "@/constants/logos";
 
 // ── Seeded PRNG ──────────────────────────────────────────────────────────────
 function prng(seed: string) {
@@ -219,10 +216,7 @@ export function NewsCover({
     line2: buildLine(seed + (category ?? "sec") + "2", 400, 160, 0.05),
   }), [seed, category]);
 
-  const cleanTicker = ticker ? ticker.split(/[,;]/)[0].trim().toUpperCase().slice(0, 12) : "";
-  // Company-logo tier: EGX/Saudi wire news has no cover photos upstream, so a
-  // ticker'd card shows the real company logo instead of generic art (parity w/ web).
-  const logoTicker = cleanTicker && (LOGO_SET.has(cleanTicker) || !!getLogoSvg(cleanTicker)) ? cleanTicker : "";
+  const cleanTicker = ticker ? ticker.split(/[,;]/)[0].trim().slice(0, 6) : "";
   const feedId = !image && id && String(id).startsWith("feed-") ? String(id).slice(5) : null;
   // size=2 (360px) for feed thumbnails — ~4× smaller/faster than size=3 (740px) and
   // plenty sharp for a 150px-tall list card. Detail screens can request a larger size.
@@ -338,8 +332,8 @@ export function NewsCover({
         {motifId === "Global"    && <NetworkMotif seed={seed} accent={tok.accent} />}
         {motifId === "IPO"       && <OrbitMotif accent={tok.accent} />}
 
-        {/* Layer 5 — ticker ghost typography (hidden when a real logo shows) */}
-        {!!cleanTicker && !logoTicker && (
+        {/* Layer 5 — ticker ghost typography */}
+        {!!cleanTicker && (
           <SvgText
             x="200" y="92"
             textAnchor="middle"
@@ -372,17 +366,6 @@ export function NewsCover({
         {/* Layer 9 — bottom vignette */}
         <Rect width={400} height={160} fill={`url(#${gid}-vign)`} />
       </Svg>
-
-      {/* Layer 10 — real company logo (centered frosted badge) */}
-      {!!logoTicker && (
-        <View style={StyleSheet.absoluteFill as any} pointerEvents="none">
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <View style={{ backgroundColor: "rgba(255,255,255,0.95)", borderRadius: 16, padding: Math.max(6, height * 0.06) }}>
-              <TickerLogo ticker={logoTicker} size={Math.min(64, Math.max(34, height * 0.4))} showFallback={false} />
-            </View>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
