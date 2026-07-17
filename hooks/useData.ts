@@ -248,6 +248,7 @@ function toFundamental(row: any): FundamentalCall {
     thesis:        row.thesis ?? undefined,
     thesisAr:      row.thesisAr ?? row.thesisar ?? undefined,
     articleId:     row.articleId ?? row.articleid ?? undefined,
+    currency:      row.currency ?? undefined,   // #1 — explicit trading currency (USD-priced EGX names)
     // Lifecycle fields — required by the performance engine (closed-call cohort).
     status:        row.status ?? "active",
     entryPrice:    row.entryPrice ?? row.entryprice ?? undefined,

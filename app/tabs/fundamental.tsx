@@ -283,6 +283,9 @@ function FeaturedArticle({
   if (!featured) return null;
 
   const match = calls.find(c => c?.ticker === featured.ticker);
+  // #1 — the matched call's explicit currency wins (some EGX names are USD-priced);
+  // otherwise fall back to the screen's market default.
+  const ccy = ((match?.currency ?? "").trim()) || currency;
   const upside = match?.remaining;
   const target = match?.targetPrice;
   // Data-integrity: a target/upside is only real when a real price backs it. The old
@@ -359,7 +362,7 @@ function FeaturedArticle({
               <Text style={[styles.featuredStatLabel, { color: C.text.muted, fontFamily: fontFamily("400") }]}>
                 {isAr ? "الهدف" : "Target"}{" "}
                 <Text style={[styles.featuredTargetValue, { color: C.primary, fontFamily: fontFamily("700") }]}>
-                  {currency} {(target as number).toFixed(2)}
+                  {ccy} {(target as number).toFixed(2)}
                 </Text>
               </Text>
             </View>
@@ -405,6 +408,10 @@ function CallCard({
   closed?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+
+  // #1 — an explicit per-call currency (some EGX names are USD-priced) wins over
+  // the screen's market default; empty/absent falls straight through to today's value.
+  const ccy = (((call as any).currency ?? "") as string).trim() || currency;
 
   // For a closed call show the REALIZED return ("محقق"), not the frozen upside
   // labelled "Remaining" — the latter implies live actionable upside on an exited position.
@@ -502,7 +509,7 @@ function CallCard({
                 {isAr ? "الحالي" : "Current"}
               </Text>
               <Text style={[styles.priceValue, { color: C.text.primary }, isRTL && styles.textRight]}>
-                {hasPrice ? `${currency} ${call.currentPrice.toFixed(2)}` : dash}
+                {hasPrice ? `${ccy} ${call.currentPrice.toFixed(2)}` : dash}
               </Text>
             </View>
             <Ionicons name={isAr ? "arrow-back" : "arrow-forward"} size={16} color={C.primary} />
@@ -511,7 +518,7 @@ function CallCard({
                 {isAr ? "الهدف" : "Target"}
               </Text>
               <Text style={[styles.priceValue, { color: C.primary }, isRTL && styles.textRight]}>
-                {hasTarget ? `${currency} ${call.targetPrice.toFixed(2)}` : dash}
+                {hasTarget ? `${ccy} ${call.targetPrice.toFixed(2)}` : dash}
               </Text>
             </View>
           </View>

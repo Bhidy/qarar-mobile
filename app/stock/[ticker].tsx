@@ -163,8 +163,12 @@ export default function StockDetail() {
   // Currency follows the MARKET (mirror of web): the live feed row carries the
   // authoritative market — a US ticker must never render "EGP" (latent while the
   // USA market is flag-disabled, fixed defensively 2026-07-10).
-  const ccy = (profile as any)?.currency
-    ?? (live?.market === "usa" ? "USD" : live?.market === "saudi" ? "SAR"
+  // #1 — the analyst's explicit per-call currency (some EGX names are USD-priced)
+  // wins, then the security's feed profile, then the market default. Empty/absent
+  // override falls straight through to the prior behavior.
+  const callCcy = (((fundCall as any)?.currency ?? "") as string).trim();
+  const ccy = callCcy || (profile as any)?.currency
+    || (live?.market === "usa" ? "USD" : live?.market === "saudi" ? "SAR"
         : /^\d{3,4}$/.test(ticker ?? "") ? "SAR" : "EGP");
   const dash = isAr ? "غير متاح" : "—";
 

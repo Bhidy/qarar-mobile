@@ -207,6 +207,7 @@ export interface FundamentalCall {
   sector: string;
   thesis?: string;
   articleId?: string;
+  currency?: string;     // #1 — explicit trading currency ("" / null = auto from market)
   // Mubasher legal disclaimer (تنويه) — rich HTML EN/AR; collapsible on the stock page.
   disclaimer?: string;
   disclaimerAr?: string;
