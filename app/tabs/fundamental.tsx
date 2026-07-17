@@ -30,7 +30,7 @@ import { RichText, looksLikeHtml } from "@/lib/rich-text";
 export default function FundamentalScreen() {
   const C = useColors();
   const { market, language, isRTL } = useTheme();
-  const { FUNDAMENTAL_CALLS, ARTICLES, FUNDAMENTAL_ARTICLES, SAUDI_FUNDAMENTAL, USA_FUNDAMENTAL, loading, refetch } = useData();
+  const { FUNDAMENTAL_CALLS, ARTICLES, FUNDAMENTAL_ARTICLES, SAUDI_FUNDAMENTAL, USA_FUNDAMENTAL, loading, refetch, PRICES } = useData();
   const [activeFilter, setActiveFilter] = useState<"all" | "invest" | "hold">("all");
 
   const isAr = language === "ar";
@@ -47,6 +47,13 @@ export default function FundamentalScreen() {
   const fontFamily = (weight: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, weight);
 
   const currency = isUsa ? "USD" : isSaudi ? (isAr ? "ر.س" : "SAR") : (isAr ? "ج.م" : "EGP");
+  // #1 — per-symbol currency: USD-priced EGX names show USD (ISO); a market-default
+  // symbol keeps its localized label. A call's own `currency` override wins downstream.
+  const marketCcyIso = isUsa ? "USD" : isSaudi ? "SAR" : "EGP";
+  const resolveCcy = (ticker?: string) => {
+    const sc = (PRICES[(ticker ?? "").toUpperCase()]?.currency ?? "").toString().trim().toUpperCase();
+    return sc && sc !== marketCcyIso ? sc : currency;
+  };
   const benchmarkLabel = isUsa ? "S&P 500" : isSaudi ? "Tadawul" : "EGX30";
 
   // Market-aware data
@@ -134,7 +141,7 @@ export default function FundamentalScreen() {
           {callsList.length > 0 ? (
             <>
               {callsPager.items.map((call, i) => (
-                <CallCard key={`${call.ticker}_${i}`} call={call} closed={callsTab === "closed"} currency={currency} benchmarkLabel={benchmarkLabel} isAr={isAr} isRTL={isRTL} fontFamily={fontFamily} C={C} />
+                <CallCard key={`${call.ticker}_${i}`} call={call} closed={callsTab === "closed"} currency={resolveCcy(call.ticker)} benchmarkLabel={benchmarkLabel} isAr={isAr} isRTL={isRTL} fontFamily={fontFamily} C={C} />
               ))}
               <ViewMoreButton {...callsPager} />
             </>

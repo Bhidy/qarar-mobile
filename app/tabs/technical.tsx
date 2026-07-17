@@ -64,6 +64,14 @@ export default function TechnicalScreen() {
   const fontFamily = (weight: "400" | "500" | "600" | "700" | "800") => fontFamilyFor(isAr, weight);
 
   const currency = isUsa ? "USD" : isSaudi ? (isAr ? "ر.س" : "SAR") : (isAr ? "ج.م" : "EGP");
+  // #1 — per-symbol currency: the ~17 USD-priced EGX names must show USD, but a
+  // market-default symbol keeps the localized label (ج.م / ر.س). Override with the
+  // authoritative feed currency (prices.currency) ONLY when it differs from the market.
+  const marketCcyIso = isUsa ? "USD" : isSaudi ? "SAR" : "EGP";
+  const resolveCcy = (ticker?: string) => {
+    const sc = (PRICES[(ticker ?? "").toUpperCase()]?.currency ?? "").toString().trim().toUpperCase();
+    return sc && sc !== marketCcyIso ? sc : currency;
+  };
   const calls = isUsa ? USA_TECHNICAL : isSaudi ? SAUDI_TECHNICAL : TECHNICAL_CALLS;
   // Separate live (actionable) from closed (track-record) calls so a closed
   // position is never shown as an "active" call or counted as one.
@@ -160,7 +168,7 @@ export default function TechnicalScreen() {
           {callsList.length > 0 ? (
             <>
               {callsPager.items.map((call, i) => (
-                <TechCallCard key={`${call.ticker}_${i}`} call={call} closed={callsTab === "closed"} currency={currency} isAr={isAr} isRTL={isRTL} fontFamily={fontFamily} />
+                <TechCallCard key={`${call.ticker}_${i}`} call={call} closed={callsTab === "closed"} currency={resolveCcy(call.ticker)} isAr={isAr} isRTL={isRTL} fontFamily={fontFamily} />
               ))}
               <ViewMoreButton {...callsPager} />
             </>
