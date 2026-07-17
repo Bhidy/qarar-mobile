@@ -14,7 +14,7 @@ import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { supabasePublic, isSupabaseReady } from "@/lib/supabase";
-import { buildIndexMap, indexReturnPct, type IndexMap } from "@/lib/performance";
+import { buildIndexMap, indexReturnPct, targetUpsidePct, levelPctFromEntry, type IndexMap } from "@/lib/performance";
 import type { HolidayRow } from "@/lib/market-status";
 import type { IndexUpdate } from "@/constants/index-catalog";
 
@@ -178,10 +178,15 @@ function applyLivePrices<T extends Record<string, any>>(arr: T[], prices: Record
     if (!live || typeof live.lastPrice !== "number") return c;
     const cp = live.lastPrice;
     const out: any = { ...c, currentPrice: cp };
-    if (typeof c.targetPrice === "number" && cp > 0) out[retField] = +(((c.targetPrice - cp) / cp) * 100).toFixed(2);
+    // Direction-aware: a SELL reaching a lower target is a GAIN (#1).
+    if (typeof c.targetPrice === "number" && cp > 0) {
+      const up = targetUpsidePct(cp, c.targetPrice, c.signal);
+      if (up !== null) out[retField] = up;
+    }
     // Keep Performance consistent with the live price (parity with web applyLivePrices).
     if (retField === "remaining" && typeof c.entryPrice === "number" && c.entryPrice > 0) {
-      out.performance = +(((cp - c.entryPrice) / c.entryPrice) * 100).toFixed(2);
+      const perf = levelPctFromEntry(c.entryPrice, cp, c.signal);
+      if (perf !== null) out.performance = perf;
     }
     return out as T;
   });

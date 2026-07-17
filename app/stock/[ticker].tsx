@@ -27,6 +27,7 @@ import { WEB_BASE } from "@/constants/site";
 import { tradingViewChartHtml, advancedChartUrl, TV_BASE_URL, webviewAllowRequest } from "@/lib/embeds";
 import { tvSymbol, tvInterval, parseTvStudies } from "@/lib/tv-symbol";
 import { getMarketStatus, formatAsOfLocal, type MarketKey } from "@/lib/market-status";
+import { getTrailingStop, levelPctFromEntry } from "@/lib/performance";
 
 /** Rich body (HTML) or plain text + a "view full report" link for complex tables. */
 function RichBody({ html, label, accent, C, isRTL, ff, ticker }: {
@@ -173,6 +174,12 @@ export default function StockDetail() {
     || (live?.market === "usa" ? "USD" : live?.market === "saudi" ? "SAR"
         : /^\d{3,4}$/.test(ticker ?? "") ? "SAR" : "EGP");
   const dash = isAr ? "غير متاح" : "—";
+  // Direction-aware % of a level from entry (target → +, stop → −), appended to each
+  // technical price (#2/#7). Empty string when not computable — never a fake 0%.
+  const lvlSuffix = (lvl?: number) => {
+    const p = levelPctFromEntry(techCall?.entryMin, lvl, techCall?.signal);
+    return p !== null ? ` (${p > 0 ? "+" : ""}${p.toFixed(1)}%)` : "";
+  };
 
   // Remaining upside to target — only meaningful for an OPEN call with a real price.
   const remaining: number | null = isFund
@@ -504,27 +511,27 @@ export default function StockDetail() {
                 </View>
               ) : null}
               <View style={styles.techLevels}>
-                <TechLevel label={isAr ? "نطاق الشراء" : "Buy Range"} value={`${ccy} ${techCall.entryMin}–${techCall.entryMax}`} color={C.text.primary} C={C} isRTL={isRTL} />
-                <TechLevel label={isAr ? "الهدف TP1" : "Target TP1"} value={`${ccy} ${techCall.targetPrice.toFixed(2)}`} color={upColor} C={C} isRTL={isRTL} />
+                <TechLevel label={isAr ? "نطاق الدخول" : "Entry Range"} value={`${ccy} ${techCall.entryMin}–${techCall.entryMax}`} color={C.text.primary} C={C} isRTL={isRTL} />
+                <TechLevel label={isAr ? "الهدف TP1" : "Target TP1"} value={`${ccy} ${techCall.targetPrice.toFixed(2)}${lvlSuffix(techCall.targetPrice)}`} color={upColor} C={C} isRTL={isRTL} />
                 {(techCall as any).tp2 ? (
-                  <TechLevel label={isAr ? "الهدف TP2" : "Target TP2"} value={`${ccy} ${((techCall as any).tp2 as number).toFixed(2)}`} color={upColor} C={C} isRTL={isRTL} />
+                  <TechLevel label={isAr ? "الهدف TP2" : "Target TP2"} value={`${ccy} ${((techCall as any).tp2 as number).toFixed(2)}${lvlSuffix((techCall as any).tp2)}`} color={upColor} C={C} isRTL={isRTL} />
                 ) : null}
                 {(techCall as any).tp3 ? (
-                  <TechLevel label={isAr ? "الهدف TP3" : "Target TP3"} value={`${ccy} ${((techCall as any).tp3 as number).toFixed(2)}`} color={upColor} C={C} isRTL={isRTL} />
+                  <TechLevel label={isAr ? "الهدف TP3" : "Target TP3"} value={`${ccy} ${((techCall as any).tp3 as number).toFixed(2)}${lvlSuffix((techCall as any).tp3)}`} color={upColor} C={C} isRTL={isRTL} />
                 ) : null}
-                <TechLevel label={isAr ? "وقف الخسارة الجريء" : "Risky Stop Loss"} value={`${ccy} ${techCall.stopLoss.toFixed(2)}`} color={dnColor} C={C} isRTL={isRTL} />
+                <TechLevel label={isAr ? "وقف الخسارة الجريء" : "Risky Stop Loss"} value={`${ccy} ${techCall.stopLoss.toFixed(2)}${lvlSuffix(techCall.stopLoss)}`} color={dnColor} C={C} isRTL={isRTL} />
                 {(techCall as any).conservativeSL ? (
-                  <TechLevel label={isAr ? "وقف محافظ" : "Conservative SL"} value={`${ccy} ${((techCall as any).conservativeSL as number).toFixed(2)}`} color={dnColor} C={C} isRTL={isRTL} />
+                  <TechLevel label={isAr ? "وقف محافظ" : "Conservative SL"} value={`${ccy} ${((techCall as any).conservativeSL as number).toFixed(2)}${lvlSuffix((techCall as any).conservativeSL)}`} color={dnColor} C={C} isRTL={isRTL} />
                 ) : null}
                 {(techCall as any).aggressiveSL ? (
-                  <TechLevel label={isAr ? "وقف هجومي" : "Aggressive SL"} value={`${ccy} ${((techCall as any).aggressiveSL as number).toFixed(2)}`} color={dnColor} C={C} isRTL={isRTL} />
+                  <TechLevel label={isAr ? "وقف هجومي" : "Aggressive SL"} value={`${ccy} ${((techCall as any).aggressiveSL as number).toFixed(2)}${lvlSuffix((techCall as any).aggressiveSL)}`} color={dnColor} C={C} isRTL={isRTL} />
                 ) : null}
-                {/* Trailing Stop Loss — live pre-calculated */}
+                {/* Trailing Stop Loss — live, direction-aware (#1): for a SELL the stop
+                    is ABOVE entry and trails DOWN as price falls. */}
                 {(() => {
-                  const trailingPct = techCall.entryMin > 0 && techCall.stopLoss > 0 && techCall.entryMin > techCall.stopLoss
-                    ? ((techCall.entryMin - techCall.stopLoss) / techCall.entryMin) * 100 : 0;
-                  const trailPrice = currentPrice > 0 && trailingPct > 0
-                    ? +(currentPrice * (1 - trailingPct / 100)).toFixed(2) : null;
+                  const { level: trailPrice } = getTrailingStop(
+                    techCall.entryMin, techCall.stopLoss, currentPrice, techCall.signal,
+                  );
                   return trailPrice !== null ? (
                     <TechLevel
                       label={isAr ? "وقف متحرك (مباشر)" : "Trailing SL (live)"}

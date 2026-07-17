@@ -239,6 +239,48 @@ export function callDirection(signal?: string | null): CallDirection {
   return signal && SELL_SIGNALS.has(signal) ? "sell" : "buy";
 }
 
+/** Direction-aware "% to target" — favorable move from `current` to `target` (#1).
+ *  BUY: (target−current)/current; SELL: (current−target)/current. null if invalid. */
+export function targetUpsidePct(
+  current?: number | null, target?: number | null, signal?: string | null,
+): number | null {
+  if (typeof current !== "number" || !Number.isFinite(current) || current <= 0) return null;
+  if (typeof target !== "number" || !Number.isFinite(target)) return null;
+  const gap = callDirection(signal) === "sell" ? current - target : target - current;
+  return +((gap / current) * 100).toFixed(2);
+}
+
+/** Direction-aware % move from entry to a level (target or stop) (#1).
+ *  BUY: (level−entry)/entry; SELL: (entry−level)/entry. Favorable → +, stop → −. */
+export function levelPctFromEntry(
+  entry?: number | null, level?: number | null, signal?: string | null,
+): number | null {
+  if (typeof entry !== "number" || !Number.isFinite(entry) || entry <= 0) return null;
+  if (typeof level !== "number" || !Number.isFinite(level) || level <= 0) return null;
+  const gap = callDirection(signal) === "sell" ? entry - level : level - entry;
+  return +((gap / entry) * 100).toFixed(2);
+}
+
+/**
+ * Direction-aware trailing stop (mirror of web performance.getTrailingStop, #1).
+ * BUY: stop below entry, trails UP as price rises. SELL: stop above entry, trails
+ * DOWN as price falls — locking the same % distance on the other side.
+ */
+export function getTrailingStop(
+  entryMin: number, stopLoss: number, currentPrice: number, signal?: string | null,
+): { pct: number; level: number | null } {
+  const dir = callDirection(signal);
+  const validGeometry = dir === "buy" ? entryMin > stopLoss : stopLoss > entryMin;
+  const pct = entryMin > 0 && stopLoss > 0 && validGeometry
+    ? (Math.abs(entryMin - stopLoss) / entryMin) * 100
+    : 0;
+  if (!(currentPrice > 0) || !(pct > 0)) return { pct, level: null };
+  const level = dir === "buy"
+    ? +(currentPrice * (1 - pct / 100)).toFixed(2)
+    : +(currentPrice * (1 + pct / 100)).toFixed(2);
+  return { pct, level };
+}
+
 /** Stock return (%) for ANY call: realized once closed, live/unrealized while open. */
 export function getStockReturn(call: PerfCall): number | null {
   if (isClosed(call)) return getRealizedReturn(call);

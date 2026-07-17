@@ -22,7 +22,7 @@ import { useViewMore } from "@/hooks/useViewMore";
 import { visibleCallUpdates } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
 import { fontFamilyFor } from "@/lib/typography";
-import { computeOverallPerformance, fmtPct, isClosed } from "@/lib/performance";
+import { computeOverallPerformance, fmtPct, isClosed, levelPctFromEntry } from "@/lib/performance";
 import { type TechnicalCall } from "@/constants/data";
 import { TickerLogo } from "@/components/shared/TickerLogo";
 import { type SaudiTechnical } from "@/constants/saudi-data";
@@ -442,7 +442,9 @@ function TechCallCard({
   // Progress-to-target denominator: the call's total target upside %. Guard against
   // entryMin=0 (div-by-zero → NaN% bar) — only render the progress section when it's
   // a finite, non-zero denominator.
-  const progressDenom = hasEntry ? (call.targetPrice / call.entryMin - 1) * 100 : 0;
+  // Direction-aware target distance from entry (#1): positive for BOTH buy & sell,
+  // so a SELL's progress bar fills as price falls toward a lower target.
+  const progressDenom = hasEntry ? (levelPctFromEntry(call.entryMin, call.targetPrice, call.signal) ?? 0) : 0;
   const hasProgress = hasReturn && Number.isFinite(progressDenom) && progressDenom !== 0;
   const progressPct = hasProgress
     ? Math.min(Math.max(Math.round(Math.abs(call.return / progressDenom) * 100), 0), 100)
@@ -523,7 +525,7 @@ function TechCallCard({
 
       {/* Price levels */}
       <View style={styles.priceGrid}>
-        <PriceItem label={isAr ? "نطاق الشراء" : "Buy Range"} value={hasEntry ? `${currency} ${call.entryMin}–${call.entryMax}` : dash} color={C.text.primary} C={C} fontFamily={fontFamily} />
+        <PriceItem label={isAr ? "نطاق الدخول" : "Entry Range"} value={hasEntry ? `${currency} ${call.entryMin}–${call.entryMax}` : dash} color={C.text.primary} C={C} fontFamily={fontFamily} />
         <View style={[styles.priceDivider, { backgroundColor: C.border.subtle }]} />
         <PriceItem label={isAr ? "الهدف TP1" : "Target TP1"} value={hasTarget ? `${currency} ${call.targetPrice.toFixed(2)}` : dash} color={upColor} C={C} fontFamily={fontFamily} />
         {(call as any).tp2 ? (
