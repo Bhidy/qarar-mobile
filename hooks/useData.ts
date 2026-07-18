@@ -265,6 +265,8 @@ function toFundamental(row: any): FundamentalCall {
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
     disclaimer:     row.disclaimer ?? undefined,
     disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
+    // Fair-value breach flag (server-owned) — "Under Review" chip on active surfaces.
+    underReview:    (row.underReview ?? row.underreview) === true,
   } as FundamentalCall;
 }
 

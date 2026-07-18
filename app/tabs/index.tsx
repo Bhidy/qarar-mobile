@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ViewMoreButton } from "@/components/shared/ViewMoreButton";
 import { useViewMore } from "@/hooks/useViewMore";
 import { useData } from "@/hooks/useData";
+import { displaySignal } from "@/lib/under-review";
 import { fontFamilyFor } from "@/lib/typography";
 import { computeOverallPerformance, fmtPct } from "@/lib/performance";
 import { getMarketStatus, formatAsOfLocal, type MarketKey } from "@/lib/market-status";
@@ -82,7 +83,7 @@ export default function HomeScreen() {
   // a dash instead of "+0.0%" (mirror of the detail/list data-integrity fix).
   const pos = (v: any): boolean => typeof v === "number" && Number.isFinite(v) && v > 0;
   const mapFund = (c: any) => ({
-    ticker: c.ticker, signal: c.signal, return: c.remaining, articleId: c.articleId,
+    ticker: c.ticker, signal: displaySignal(c), return: c.remaining, articleId: c.articleId,
     hasReturn: Number.isFinite(c.remaining) && pos(c.currentPrice) && pos(c.targetPrice),
   });
   const mapTech = (c: any) => ({

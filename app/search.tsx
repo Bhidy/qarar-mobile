@@ -11,6 +11,7 @@ import { SignalBadge } from "@/components/shared/SignalBadge";
 import { TickerLogo } from "@/components/shared/TickerLogo";
 import { visibleCallUpdates } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
+import { displaySignal } from "@/lib/under-review";
 
 const has = (s: any, q: string) => typeof s === "string" && s.toLowerCase().includes(q);
 
@@ -61,7 +62,7 @@ export default function SearchScreen() {
       const k = `${kind}:${tk}:${market}`;
       if (seen.has(k)) return; seen.add(k);
       calls.push({
-        key: k, ticker: tk, signal: c.signal, market,
+        key: k, ticker: tk, signal: displaySignal(c), market,
         title: isAr ? (c.companyAr || c.company || tk) : (c.company || tk),
         subtitle: kind === "f" ? (isAr ? "توصية أساسية" : "Fundamental call") : (isAr ? "توصية فنية" : "Technical call"),
         updates: visibleCallUpdates(c.updates).length,

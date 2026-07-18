@@ -211,6 +211,11 @@ export interface FundamentalCall {
   // Mubasher legal disclaimer (تنويه) — rich HTML EN/AR; collapsible on the stock page.
   disclaimer?: string;
   disclaimerAr?: string;
+  // Lifecycle (attached by useData toFundamental; optional for the seed rows).
+  status?: "active" | "closed";
+  // Fair-value breach flag (server-owned, sticky until analyst update) — active
+  // surfaces render "Under Review" instead of the Buy/Sell chip (lib/under-review).
+  underReview?: boolean;
 }
 
 export const FUNDAMENTAL_CALLS: FundamentalCall[] = [

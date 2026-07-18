@@ -22,6 +22,7 @@ import { PerformanceComparison } from "@/components/fundamental/PerformanceCompa
 import { useViewMore } from "@/hooks/useViewMore";
 import { visibleCallUpdates, effectiveStatus } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
+import { displaySignal } from "@/lib/under-review";
 import { fontFamilyFor } from "@/lib/typography";
 import { getRealizedReturn } from "@/lib/performance";
 import { displayAuthors } from "@/lib/byline";
@@ -468,7 +469,7 @@ function CallCard({
         <View style={styles.callInfo}>
           <View style={[styles.callInfoTop, isRTL && styles.rowRTL]}>
             <Text style={[styles.callTicker, { color: C.text.primary, fontFamily: fontFamily("800") }]}>{call.ticker}</Text>
-            <SignalBadge signal={call.signal} size="sm" />
+            <SignalBadge signal={displaySignal(call)} size="sm" />
             {closed ? (
               <View style={[styles.closedBadge, { backgroundColor: C.bg.elevated, borderColor: C.border.default }]}>
                 <Text style={[styles.closedBadgeText, { color: C.text.muted, fontFamily: fontFamily("700") }]}>

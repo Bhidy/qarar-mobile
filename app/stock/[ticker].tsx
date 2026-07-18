@@ -18,6 +18,7 @@ import { Spacing, Radius, Typography } from "@/constants/theme";
 import { SignalBadge } from "@/components/shared/SignalBadge";
 import { TickerLogo } from "@/components/shared/TickerLogo";
 import { useData } from "@/hooks/useData";
+import { displaySignal } from "@/lib/under-review";
 import { RichText, looksLikeHtml, htmlHasTable } from "@/lib/rich-text";
 import { CallUpdates } from "@/components/shared/CallUpdates";
 import { CollapsibleDisclaimer } from "@/components/shared/CollapsibleDisclaimer";
@@ -325,7 +326,7 @@ export default function StockDetail() {
                   textColor={C.text.primary}
                 />
               ) : null}
-              {fundCall && <SignalBadge signal={fundCall.signal} size="md" />}
+              {fundCall && <SignalBadge signal={displaySignal(fundCall)} size="md" />}
               {techCall && <SignalBadge signal={techCall.signal} size="md" />}
             </View>
           </View>

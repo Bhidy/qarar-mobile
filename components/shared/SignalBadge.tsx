@@ -12,6 +12,7 @@ interface SignalBadgeProps {
 const AR_SIGNAL: Record<string, string> = {
   invest: "استثمار", buy: "شراء", hold: "احتفاظ",
   "take profit": "جني أرباح", "take-profit": "جني أرباح", sell: "بيع", live: "مباشر",
+  "under review": "قيد المراجعة", "under-review": "قيد المراجعة",
 };
 
 /**

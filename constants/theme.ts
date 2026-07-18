@@ -172,6 +172,16 @@ export function getSignalConfig(signal: string) {
       solid:  true,
     };
   }
+  // Under Review — fair-value breach: rating suspended pending analyst update.
+  // Amber, deliberately distinct from Hold's gold (parity with web --signal-review).
+  if (s === "under-review") {
+    return {
+      color:  "#F59E0B",
+      bg:     "rgba(245, 158, 11, 0.14)",
+      border: "#B45309",
+      solid:  false,
+    };
+  }
   // Default: report / neutral
   return {
     color:  Colors.text.secondary,
