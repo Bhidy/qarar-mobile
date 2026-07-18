@@ -301,7 +301,8 @@ function FeaturedArticle({
   // positive target + current price; otherwise the whole stats row is omitted.
   const matchHasPrice = typeof match?.currentPrice === "number" && match.currentPrice > 0;
   const hasTarget = typeof target === "number" && target > 0;
-  const hasUpside = typeof upside === "number" && Number.isFinite(upside) && matchHasPrice && hasTarget;
+  // Under review ⇒ target-derived upside is suspended (fair value breached).
+  const hasUpside = typeof upside === "number" && Number.isFinite(upside) && matchHasPrice && hasTarget && match?.underReview !== true;
   const title = isAr && featured.titleAr ? featured.titleAr : featured.title;
   const subtitle = isAr && featured.subtitleAr ? featured.subtitleAr : featured.subtitle;
   const upColor = (upside ?? 0) >= 0 ? C.primary : C.accent.red;
@@ -433,9 +434,12 @@ function CallCard({
   const dash = isAr ? "غير متاح" : "—";
   // Headline: realized for closed; for an OPEN call only show the stored upside when
   // there's a real price to back it (else dash — never a fake +0.0%).
+  // Under review ⇒ the target-derived upside is suspended: show the amber
+  // "Under Review" label instead of a (negative) % — parity with web.
+  const underReview = !closed && (call as any).underReview === true;
   const headlineValue: number | null = closed
     ? (realized as number)
-    : (hasPrice ? call.remaining : null);
+    : (hasPrice && !underReview ? call.remaining : null);
   const remColor = (headlineValue ?? 0) >= 0 ? C.primary : C.accent.red;
   // Performance is only meaningful for an OPEN call with a real price (mirror web).
   const perfValue: number | null = closed
@@ -501,8 +505,8 @@ function CallCard({
           <Text style={[styles.callReturnLabel, { color: C.text.muted, fontFamily: fontFamily("600") }]}>
             {closed ? (isAr ? "محقق" : "Realized") : (isAr ? "المتبقي" : "Remaining")}
           </Text>
-          <Text style={[styles.callReturnValue, { color: headlineValue == null ? C.text.muted : remColor }]}>
-            {headlineValue == null ? dash : `${headlineValue > 0 ? "+" : ""}${headlineValue.toFixed(2)}%`}
+          <Text style={[styles.callReturnValue, { color: underReview ? "#F59E0B" : headlineValue == null ? C.text.muted : remColor }]}>
+            {underReview ? (isAr ? "قيد المراجعة" : "Under Review") : headlineValue == null ? dash : `${headlineValue > 0 ? "+" : ""}${headlineValue.toFixed(2)}%`}
           </Text>
         </View>
         <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={C.text.muted} />

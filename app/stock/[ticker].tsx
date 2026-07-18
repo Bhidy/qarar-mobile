@@ -183,8 +183,10 @@ export default function StockDetail() {
   };
 
   // Remaining upside to target — only meaningful for an OPEN call with a real price.
+  // Under review (fair value breached) ⇒ suspended: the UPSIDE ring is dropped and
+  // the badge next to it reads "Under Review" (parity with web).
   const remaining: number | null = isFund
-    ? (isClosedCall || !hasPrice || !hasTarget ? null : +(((targetPrice - currentPrice) / currentPrice) * 100).toFixed(2))
+    ? (isClosedCall || !hasPrice || !hasTarget || (fundCall as any)?.underReview === true ? null : +(((targetPrice - currentPrice) / currentPrice) * 100).toFixed(2))
     : (techCall && Number.isFinite(techCall.return as any) ? Number(techCall.return) : null);
 
   // Performance — CLOSED: realized return; OPEN: unrealized vs entry. Null (→ "—")

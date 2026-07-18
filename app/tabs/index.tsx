@@ -84,7 +84,9 @@ export default function HomeScreen() {
   const pos = (v: any): boolean => typeof v === "number" && Number.isFinite(v) && v > 0;
   const mapFund = (c: any) => ({
     ticker: c.ticker, signal: displaySignal(c), return: c.remaining, articleId: c.articleId,
-    hasReturn: Number.isFinite(c.remaining) && pos(c.currentPrice) && pos(c.targetPrice),
+    // Under review ⇒ the target-derived upside is suspended (renders the dash);
+    // the chip next to it already reads "Under Review".
+    hasReturn: Number.isFinite(c.remaining) && pos(c.currentPrice) && pos(c.targetPrice) && c.underReview !== true,
   });
   const mapTech = (c: any) => ({
     ticker: c.ticker, signal: c.signal, return: c.return,
