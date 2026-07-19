@@ -21,6 +21,7 @@ import * as Linking from "expo-linking";
 import * as Crypto from "expo-crypto";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { supabase, SUPABASE_AUTH_STORAGE_KEY } from "@/lib/supabase";
+import { track } from "@/lib/analytics";
 import { useTheme } from "@/context/ThemeContext";
 import { WEB_BASE } from "@/constants/site";
 
@@ -150,6 +151,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const nextAvatar = (s.user.user_metadata?.avatar_url as string | undefined) ?? null;
         setPhotoUri(nextAvatar);
       }
+      // First-party analytics — real sign-ins only (TOKEN_REFRESHED is passive;
+      // per-session dedupe absorbs duplicate SIGNED_IN emissions).
+      if (evt === "SIGNED_IN" && s?.user) {
+        track("login_succeeded", {
+          props: { method: (s.user.app_metadata?.provider as string) ?? "email" },
+        });
+      }
+
       // Biometric vault refresh: after a normal sign-in (and on token rotation,
       // since Supabase invalidates the previous refresh token) keep the vault
       // holding a CURRENT refresh token — but only while biometric is enabled.

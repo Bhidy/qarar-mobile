@@ -9,6 +9,7 @@ import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
+import { track } from "@/lib/analytics";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { Spacing, Radius, Typography } from "@/constants/theme";
@@ -34,6 +35,18 @@ export default function ArticleDetail() {
   // No `?? all[0]` fallback: a stale/deleted id must hit the not-found screen below,
   // not silently render an unrelated report (audit mobile-H1).
   const article = all.find(a => a.id === id);
+
+  // First-party analytics — one report_read per report per session.
+  useEffect(() => {
+    if (article) {
+      track("report_read", {
+        entityType: "article", entityId: String(article.id),
+        ticker: (article as any).ticker, market: (article as any).market,
+        locale: language === "ar" ? "ar" : "en",
+        props: { reportType: "fundamental" },
+      });
+    }
+  }, [article?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { isDark } = useTheme();
   // ── Technical Report interactive chart (same as a Live Signal) ──────────────

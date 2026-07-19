@@ -14,6 +14,7 @@ import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { supabasePublic, isSupabaseReady } from "@/lib/supabase";
+import { track, noteAppActive } from "@/lib/analytics";
 import { buildIndexMap, indexReturnPct, targetUpsidePct, levelPctFromEntry, type IndexMap } from "@/lib/performance";
 import type { HolidayRow } from "@/lib/market-status";
 import type { IndexUpdate } from "@/constants/index-catalog";
@@ -833,7 +834,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }, jitter) as unknown as ReturnType<typeof setInterval>;
     };
     schedule();
-    const sub = AppState.addEventListener("change", (s) => { if (s === "active") fetchAll(); });
+    // First-party analytics — cold start opens a session; foreground after a
+    // ≥30-min background gap opens a new one (noteAppActive tracks the gap).
+    track("session_started");
+    const sub = AppState.addEventListener("change", (s) => {
+      if (s === "active") {
+        noteAppActive();
+        track("session_started");
+        fetchAll();
+      }
+    });
     return () => {
       stopped = true;
       if (pollRef.current) clearTimeout(pollRef.current as unknown as ReturnType<typeof setTimeout>);

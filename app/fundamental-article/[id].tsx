@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { formatDate } from "@/lib/format-date";
 import { ScrollView, View, StyleSheet, Pressable } from "react-native";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { track } from "@/lib/analytics";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { Spacing, Radius, Typography } from "@/constants/theme";
@@ -45,6 +46,17 @@ export default function FundamentalArticleScreen() {
     () => (FUNDAMENTAL_ARTICLES as any[]).find((a) => String(a.id) === String(id)),
     [FUNDAMENTAL_ARTICLES, id]
   );
+
+  // First-party analytics — one article_read per article per session.
+  useEffect(() => {
+    if (item) {
+      track("article_read", {
+        entityType: "fundamental_article", entityId: String(item.id),
+        ticker: item.ticker, market: item.market,
+        locale: language === "ar" ? "ar" : "en",
+      });
+    }
+  }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pick = (en?: string, ar?: string) => (isAr ? (ar || en) : (en || ar)) ?? "";
   const title = item ? pick(item.title, item.titleAr) : "";

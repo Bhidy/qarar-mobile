@@ -8,6 +8,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { router, useLocalSearchParams } from "expo-router";
+import { track } from "@/lib/analytics";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors, useTheme } from "@/context/ThemeContext";
@@ -54,6 +55,16 @@ export default function IndexUpdateScreen() {
     () => (INDEX_UPDATES as any[]).find((u) => String(u.id) === String(id)),
     [INDEX_UPDATES, id]
   );
+
+  // First-party analytics — one index_update_viewed per update per session.
+  useEffect(() => {
+    if (item) {
+      track("index_update_viewed", {
+        entityType: "index_update", entityId: String(item.id),
+        market: item.market, locale: language === "ar" ? "ar" : "en",
+      });
+    }
+  }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const entry = item ? indexCatalogEntry(item.indexSymbol) : undefined;
 

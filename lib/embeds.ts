@@ -215,7 +215,8 @@ export function audioPlayerHtml(
   function fmt(s){if(!isFinite(s)||s<0)s=0;var m=Math.floor(s/60),x=Math.floor(s%60);return m+':'+(x<10?'0':'')+x;}
   function paint(){ic.innerHTML='<path d="'+(a.paused?PLAY:PAUSE)+'"/>';}
   pp.onclick=function(){ if(a.paused){a.play().catch(function(){});} else {a.pause();} };
-  a.onplay=paint; a.onpause=paint; a.onended=paint;
+  a.onplay=function(){paint();try{window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({audio_play:true}))}catch(e){}};
+  a.onpause=paint; a.onended=paint;
   a.onloadedmetadata=function(){ dur.textContent=fmt(a.duration); };
   a.ontimeupdate=function(){
     cur.textContent=fmt(a.currentTime);

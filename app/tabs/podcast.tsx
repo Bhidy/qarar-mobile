@@ -19,6 +19,7 @@
  * the artwork + play/pause button — tapping the text never navigates or opens anything.
  */
 import { useEffect, useState } from "react";
+import { track } from "@/lib/analytics";
 import {
   View, StyleSheet, FlatList, Pressable, Image, Linking,
   ActivityIndicator, RefreshControl,
@@ -193,6 +194,21 @@ export default function PodcastScreen() {
                       }}
                       originWhitelist={["*"]}
                       onShouldStartLoadWithRequest={webviewAllowRequest}
+                      onMessage={(e) => {
+                        // First-party analytics — the in-page player posts {audio_play}
+                        // on real playback start; dedupe is per episode per session.
+                        try {
+                          const m = JSON.parse(e.nativeEvent.data || "{}");
+                          if (m && m.audio_play && activeEp) {
+                            track("podcast_played", {
+                              entityType: "podcast_episode",
+                              entityId: String(activeEp.id),
+                              locale: isAr ? "ar" : "en",
+                              props: { title: activeEp.name ?? "" },
+                            });
+                          }
+                        } catch { /* ignore malformed frames */ }
+                      }}
                       style={{ height: 110, backgroundColor: "transparent" }}
                       allowsInlineMediaPlayback
                       mediaPlaybackRequiresUserAction={false}

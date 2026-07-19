@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { track } from "@/lib/analytics";
 import { getTranslation } from "@/constants/translations";
 import type { Locale } from "@/constants/translations";
 
@@ -106,7 +107,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setMode     = (m: ThemeMode)       => { setModeState(m);     AsyncStorage.setItem("@theme_mode",     m).catch(() => {}); };
   const setAccent   = (a: AccentColor)     => { setAccentState(a);   AsyncStorage.setItem("@theme_accent",   a).catch(() => {}); };
   const setLanguage = (l: AppLanguage)     => { setLanguageState(l); AsyncStorage.setItem("@theme_language", l).catch(() => {}); };
-  const setMarket   = (m: AppMarket)       => { const lm = lockMarket(m); setMarketState(lm); AsyncStorage.setItem("@theme_market", lm).catch(() => {}); };
+  const setMarket   = (m: AppMarket)       => {
+    const lm = lockMarket(m);
+    // First-party analytics — only real changes, not re-selects of the same market.
+    setMarketState((prev) => {
+      if (prev !== lm) track("market_switched", { market: lm, allowRepeat: true });
+      return lm;
+    });
+    AsyncStorage.setItem("@theme_market", lm).catch(() => {});
+  };
   const setPhotoUri = (uri: string | null) => {
     setPhotoUriState(uri);
     const key = photoKey(boundUserId);

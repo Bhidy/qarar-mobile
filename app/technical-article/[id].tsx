@@ -9,6 +9,7 @@ import * as Haptics from "expo-haptics";
 import { Text } from "@/components/shared/AppText";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { track } from "@/lib/analytics";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { Spacing, Radius, Typography } from "@/constants/theme";
@@ -74,6 +75,18 @@ export default function TechnicalArticleScreen() {
     () => (TECHNICAL_ARTICLES as any[]).find((a) => String(a.id) === String(id)),
     [TECHNICAL_ARTICLES, id]
   );
+
+  // First-party analytics — one report_read per technical report per session.
+  useEffect(() => {
+    if (item) {
+      track("report_read", {
+        entityType: "technical_article", entityId: String(item.id),
+        ticker: item.ticker, market: item.market,
+        locale: language === "ar" ? "ar" : "en",
+        props: { reportType: "technical" },
+      });
+    }
+  }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Interactive chart (TradingView) — parity with the technical signals ──
   const [showLiveChart, setShowLiveChart] = useState(false);

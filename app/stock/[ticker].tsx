@@ -9,6 +9,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { router, useLocalSearchParams } from "expo-router";
+import { track } from "@/lib/analytics";
 import { supabasePublic } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -76,6 +77,16 @@ export default function StockDetail() {
   // Market-aware lookup: a ticker may belong to the Egypt OR the Saudi (Tadawul)
   // cohort, so search both arrays. (Previously only the EGX arrays were read, so
   // every Saudi ticker fell through to "No Active Coverage" with a 0.00 price.)
+  // First-party analytics — one stock_page_viewed per ticker per session.
+  useEffect(() => {
+    if (ticker) {
+      track("stock_page_viewed", {
+        entityType: "stock", entityId: String(ticker), ticker: String(ticker),
+        locale: language === "ar" ? "ar" : "en",
+      });
+    }
+  }, [ticker]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fundCall: any = FUNDAMENTAL_CALLS.find(c => c.ticker === ticker)
     ?? (SAUDI_FUNDAMENTAL as any[]).find(c => c.ticker === ticker);
   const techCall: any = TECHNICAL_CALLS.find(c => c.ticker === ticker)
