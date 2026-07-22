@@ -18,6 +18,7 @@ import { fontFamilyFor } from "@/lib/typography";
 import { TickerLogo } from "@/components/shared/TickerLogo";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { useData } from "@/hooks/useData";
+import { useCompanyName } from "@/hooks/useCompanyName";
 
 const WATCH_PREFIX = "@watch:";
 
@@ -32,6 +33,7 @@ export default function WatchlistScreen() {
     USA_FUNDAMENTAL, USA_TECHNICAL,
     PRICES,
   } = useData();
+  const companyName = useCompanyName();
 
   const [tickers, setTickers] = useState<string[]>([]);
 
@@ -57,20 +59,10 @@ export default function WatchlistScreen() {
   // pages pushed ON TOP of this screen, and the list must be fresh on return.
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  // Company name resolved from the loaded call cohorts (all markets); the
-  // watchlist itself stores only tickers. Falls back to the bare ticker.
-  const companyFor = (t: string): string => {
-    const pools: any[][] = [
-      FUNDAMENTAL_CALLS as any[], TECHNICAL_CALLS as any[],
-      SAUDI_FUNDAMENTAL as any[], SAUDI_TECHNICAL as any[],
-      USA_FUNDAMENTAL as any[], USA_TECHNICAL as any[],
-    ];
-    for (const pool of pools) {
-      const c = pool.find((x) => x?.ticker === t);
-      if (c) return (isAr ? (c.companyAr || c.company) : c.company) || t;
-    }
-    return t;
-  };
+  // Company name through the ONE global resolver — the watchlist stores only
+  // tickers, and scanning the loaded call cohorts (as this used to) left every
+  // watched stock WITHOUT a published call showing a bare ticker.
+  const companyFor = (t: string): string => companyName(t) || t;
 
   const removeTicker = (t: string) => {
     Haptics.selectionAsync();

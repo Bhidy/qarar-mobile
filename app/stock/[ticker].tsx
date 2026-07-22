@@ -19,6 +19,7 @@ import { Spacing, Radius, Typography } from "@/constants/theme";
 import { SignalBadge } from "@/components/shared/SignalBadge";
 import { TickerLogo } from "@/components/shared/TickerLogo";
 import { useData } from "@/hooks/useData";
+import { useCompanyName } from "@/hooks/useCompanyName";
 import { displaySignal } from "@/lib/under-review";
 import { RichText, looksLikeHtml, htmlHasTable } from "@/lib/rich-text";
 import { CallUpdates } from "@/components/shared/CallUpdates";
@@ -73,6 +74,7 @@ export default function StockDetail() {
   const isAr = language === "ar";
   const { ticker } = useLocalSearchParams<{ ticker: string }>();
   const { FUNDAMENTAL_CALLS, TECHNICAL_CALLS, SAUDI_FUNDAMENTAL, SAUDI_TECHNICAL, ARTICLES, PRICES, COMPANIES, MARKET_CALENDAR } = useData();
+  const companyName = useCompanyName();
 
   // Market-aware lookup: a ticker may belong to the Egypt OR the Saudi (Tadawul)
   // cohort, so search both arrays. (Previously only the EGX arrays were read, so
@@ -298,10 +300,14 @@ export default function StockDetail() {
             <TickerLogo ticker={ticker ?? ""} size={48} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.heroCompany, { color: C.text.primary }, isRTL && { textAlign: "right" }]}>
-                {profile?.name
-                  ?? (isAr ? (fundCall?.companyAr || fundCall?.company) : fundCall?.company)
-                  ?? (isAr ? ((techCall as any)?.companyAr || techCall?.company) : techCall?.company)
-                  ?? ticker}
+                {/* One global resolver (analyst call text → symbol_master →
+                    companies profile, PER LANGUAGE). The old chain started at
+                    profile?.name, which is English-only — an Arabic reader saw
+                    the English company name on any stock with a profile row. */}
+                {companyName(ticker, {
+                  en: fundCall?.company ?? techCall?.company,
+                  ar: (fundCall as any)?.companyAr ?? (techCall as any)?.companyAr,
+                }) || ticker}
               </Text>
               <Text style={[styles.heroSector, { color: C.text.muted }, isRTL && { textAlign: "right" }]}>
                 {profile?.sector ?? fundCall?.sector ?? (isAr ? "مدرج في السوق" : "EGX Listed")}

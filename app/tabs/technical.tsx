@@ -21,6 +21,7 @@ import { ScreenHeader } from "@/components/shared/ScreenHeader";
 import { useViewMore } from "@/hooks/useViewMore";
 import { visibleCallUpdates } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
+import { useCompanyName } from "@/hooks/useCompanyName";
 import { fontFamilyFor } from "@/lib/typography";
 import { computeOverallPerformance, fmtPct, isClosed, levelPctFromEntry } from "@/lib/performance";
 import { type TechnicalCall } from "@/constants/data";
@@ -425,6 +426,7 @@ function TechCallCard({
   closed?: boolean;
 }) {
   const C = useColors();
+  const resolveCompanyName = useCompanyName();
   const upColor = C.primary;
   const dnColor = C.accent.red;
   // Data-integrity hardened (mirror of stock detail): a missing level/return must
@@ -472,7 +474,7 @@ function TechCallCard({
               </View>
             ) : null}
           </View>
-          <Text style={[styles.callCompany, { color: C.text.secondary, fontFamily: fontFamily("400") }, isRTL && styles.textRight]} numberOfLines={1}>{call.company}</Text>
+          <Text style={[styles.callCompany, { color: C.text.secondary, fontFamily: fontFamily("400") }, isRTL && styles.textRight]} numberOfLines={1}>{resolveCompanyName(call.ticker, { en: call.company, ar: (call as any).companyAr })}</Text>
           <View style={[styles.callMeta, isRTL && styles.rowRTL]}>
             <Ionicons name="person-outline" size={10} color={C.text.muted} />
             <Text style={[styles.callMetaText, { color: C.text.muted, fontFamily: fontFamily("400") }]}>{call.analyst} · {formatDate(call.date)}</Text>

@@ -22,6 +22,7 @@ import { PerformanceComparison } from "@/components/fundamental/PerformanceCompa
 import { useViewMore } from "@/hooks/useViewMore";
 import { visibleCallUpdates, effectiveStatus } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
+import { useCompanyName } from "@/hooks/useCompanyName";
 import { displaySignal } from "@/lib/under-review";
 import { fontFamilyFor } from "@/lib/typography";
 import { getRealizedReturn } from "@/lib/performance";
@@ -416,6 +417,7 @@ function CallCard({
   C: ReturnType<typeof useColors>;
   closed?: boolean;
 }) {
+  const resolveCompanyName = useCompanyName();
   const [expanded, setExpanded] = useState(false);
 
   // #1 — an explicit per-call currency (some EGX names are USD-priced) wins over
@@ -449,7 +451,9 @@ function CallCard({
 
   // Thesis: pick Arabic if available and Arabic selected
   const thesisText = isAr && "thesisAr" in call ? call.thesisAr : call.thesis;
-  const companyName = isAr && "companyAr" in call ? (call as any).companyAr : call.company;
+  // ONE global resolver (call text → symbol_master → profile, per language) so
+  // a call with no companyAr no longer falls back to the English name in Arabic.
+  const companyName = resolveCompanyName(call.ticker, { en: call.company, ar: (call as any).companyAr });
   const benchmarkValue = "egx30" in call ? (call as any).egx30 : "sp500" in call ? (call as any).sp500 : (call as any).tadawul;
   // A missing benchmark is null/undefined (the ingest explicitly forbids 0% — a fake
   // flat market inflates alpha). Render the dash, not "+0.00%", when it's absent.

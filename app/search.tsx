@@ -11,6 +11,7 @@ import { SignalBadge } from "@/components/shared/SignalBadge";
 import { TickerLogo } from "@/components/shared/TickerLogo";
 import { visibleCallUpdates } from "@/lib/call-updates";
 import { useData } from "@/hooks/useData";
+import { useCompanyName } from "@/hooks/useCompanyName";
 import { displaySignal } from "@/lib/under-review";
 
 const has = (s: any, q: string) => typeof s === "string" && s.toLowerCase().includes(q);
@@ -48,6 +49,7 @@ export default function SearchScreen() {
     USA_FUNDAMENTAL, USA_TECHNICAL, USA_NEWS,
     ARTICLES, SAUDI_ARTICLES, TECHNICAL_ARTICLES, NEWS, SAUDI_NEWS,
   } = useData();
+  const companyName = useCompanyName();
 
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
@@ -63,7 +65,7 @@ export default function SearchScreen() {
       if (seen.has(k)) return; seen.add(k);
       calls.push({
         key: k, ticker: tk, signal: displaySignal(c), market,
-        title: isAr ? (c.companyAr || c.company || tk) : (c.company || tk),
+        title: companyName(tk, { en: c.company, ar: c.companyAr }) || tk,
         subtitle: kind === "f" ? (isAr ? "توصية أساسية" : "Fundamental call") : (isAr ? "توصية فنية" : "Technical call"),
         updates: visibleCallUpdates(c.updates).length,
         go: () => router.push({ pathname: "/stock/[ticker]", params: { ticker: tk } }),
@@ -118,7 +120,7 @@ export default function SearchScreen() {
       reports: reports.filter(h => keepMkt(h.market)),
       news:    news.filter(h => keepMkt(h.market)),
     };
-  }, [q, isAr, FUNDAMENTAL_CALLS, TECHNICAL_CALLS, SAUDI_FUNDAMENTAL, SAUDI_TECHNICAL, USA_FUNDAMENTAL, USA_TECHNICAL, USA_NEWS, ARTICLES, SAUDI_ARTICLES, TECHNICAL_ARTICLES, NEWS, SAUDI_NEWS]);
+  }, [q, isAr, companyName, FUNDAMENTAL_CALLS, TECHNICAL_CALLS, SAUDI_FUNDAMENTAL, SAUDI_TECHNICAL, USA_FUNDAMENTAL, USA_TECHNICAL, USA_NEWS, ARTICLES, SAUDI_ARTICLES, TECHNICAL_ARTICLES, NEWS, SAUDI_NEWS]);
 
   const total = groups ? groups.calls.length + groups.reports.length + groups.news.length : 0;
 

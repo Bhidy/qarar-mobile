@@ -17,6 +17,7 @@ import { supabasePublic, isSupabaseReady } from "@/lib/supabase";
 import { track, noteAppActive } from "@/lib/analytics";
 import { buildIndexMap, indexReturnPct, targetUpsidePct, levelPctFromEntry, type IndexMap } from "@/lib/performance";
 import type { HolidayRow } from "@/lib/market-status";
+import { buildCompanyNames, type CompanyNames } from "@/lib/company-name";
 import type { IndexUpdate } from "@/constants/index-catalog";
 
 // Rolling window (days) of daily index bars pulled for live benchmark computation.
@@ -128,6 +129,10 @@ interface AppData {
   // Mubasher live feeds (real EGX) — keyed by UPPERCASE ticker; empty until cron populates.
   PRICES:            Record<string, any>;
   COMPANIES:         Record<string, any>;
+  // ONE ticker→company-name truth for every screen that prints a symbol (home
+  // Calls Summary, call cards, watchlist, search, stock header). Read it through
+  // useCompanyName() rather than re-deriving a fallback chain per screen.
+  COMPANY_NAMES:     CompanyNames;
   RESEARCH_DOCS:     any[];
   // Ad-hoc market closures (market_calendar rows) — feeds lib/market-status so the
   // UI can say "Market Closed — Holiday" instead of showing a silently frozen price.
@@ -524,7 +529,7 @@ const mk = <T,>(mock: T, empty: T): T => (ALLOW_MOCK ? mock : empty);
 // Mubasher feed tables are additive and may not exist until the schema SQL runs.
 // Skip a table for the session once it's confirmed missing → no recurring 404s.
 const missingFeedTables = new Set<string>();
-async function feedSelect(table: string, orderCol?: string): Promise<any[]> {
+async function feedSelect(table: string, orderCol?: string, columns = "*"): Promise<any[]> {
   if (!supabasePublic || missingFeedTables.has(table)) return [];
   // PostgREST caps any response at 1,000 rows. `prices` crossed that line when
   // full-exchange coverage landed (2026-07-10) and hundreds of tickers silently
@@ -532,7 +537,7 @@ async function feedSelect(table: string, orderCol?: string): Promise<any[]> {
   const PAGE = 1000;
   const rows: any[] = [];
   for (let page = 0; page < 5; page++) {
-    const base = supabasePublic.from(table).select("*").range(page * PAGE, page * PAGE + PAGE - 1);
+    const base = supabasePublic.from(table).select(columns).range(page * PAGE, page * PAGE + PAGE - 1);
     const q = orderCol ? base.order(orderCol, { ascending: false }) : base;
     const { data, error } = await q;
     if (error) {
@@ -574,6 +579,7 @@ function initialData(): DataState {
     USA_ARTICLES:      mk(STATIC_USA_ARTICLES, []),
     PRICES:            {},
     COMPANIES:         {},
+    COMPANY_NAMES:     {},
     RESEARCH_DOCS:     [],
     MARKET_CALENDAR:   [],
     loading:           isSupabaseReady,
@@ -647,7 +653,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           { data: portfolioRows },
           { data: notifRows },
         ],
-        [priceRows, companyRows, researchRows, techArticleRows, fundArticleRows, indexUpdateRows, indexRows, calendarRows],
+        [priceRows, companyRows, symbolRows, researchRows, techArticleRows, fundArticleRows, indexUpdateRows, indexRows, calendarRows],
       ] = await Promise.all([
         Promise.all([
           supabasePublic.from("articles").select("*").order("createdAt", { ascending: false }),
@@ -661,6 +667,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         Promise.all([
           feedSelect("prices"),
           feedSelect("companies"),
+          // symbol_master — the ONLY complete ticker→company-name source (EGX +
+          // Tadawul, 100% populated in BOTH EN and AR; `companies` carries no
+          // Arabic name at all). Feeds lib/company-name.
+          feedSelect("symbol_master", undefined, "ticker,name,nameAr"),
           feedSelect("research_docs", "reportDate"),
           feedSelect("technical_articles", "createdAt"),
           feedSelect("fundamental_articles", "createdAt"),
@@ -687,12 +697,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const COMPANIES: Record<string, any> = {};
       (companyRows ?? []).forEach((c: any) => { if (c?.ticker) COMPANIES[String(c.ticker).toUpperCase()] = c; });
       const RESEARCH_DOCS = (researchRows ?? []) as any[];
+      // Order = precedence: the analyst's own call text first (editorial, and the
+      // only source covering US symbols), then symbol_master (complete EN+AR),
+      // then the companies profile as a last resort. See lib/company-name.
+      const COMPANY_NAMES = buildCompanyNames([
+        { rows: fundCalls as any[],   en: "company", ar: "companyAr" },
+        { rows: techCalls as any[],   en: "company", ar: "companyAr" },
+        { rows: symbolRows,           en: "name",    ar: "nameAr" },
+        { rows: companyRows,          en: "name",    ar: "nameAr" },
+      ]);
       const indexMap = buildIndexMap(indexRows ?? []); // EGX30/TASI daily bars (#1)
       const MARKET_CALENDAR = (calendarRows ?? []) as HolidayRow[];
 
       // If all tables empty, keep static data (not seeded yet) but surface live feeds.
       if (!articles?.length && !fundCalls?.length && !techArticleRows?.length && !indexUpdateRows?.length) {
-        setData(d => ({ ...d, PRICES, COMPANIES, RESEARCH_DOCS, MARKET_CALENDAR, loading: false }));
+        setData(d => ({ ...d, PRICES, COMPANIES, COMPANY_NAMES, RESEARCH_DOCS, MARKET_CALENDAR, loading: false }));
         return;
       }
 
@@ -778,6 +797,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         MARKET_CALENDAR,
         PRICES,
         COMPANIES,
+        COMPANY_NAMES,
         RESEARCH_DOCS,
         loading:           false,
       });

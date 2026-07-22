@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ViewMoreButton } from "@/components/shared/ViewMoreButton";
 import { useViewMore } from "@/hooks/useViewMore";
 import { useData } from "@/hooks/useData";
+import { useCompanyName } from "@/hooks/useCompanyName";
 import { displaySignal } from "@/lib/under-review";
 import { fontFamilyFor } from "@/lib/typography";
 import { computeOverallPerformance, fmtPct } from "@/lib/performance";
@@ -98,6 +99,7 @@ export default function HomeScreen() {
   const activeCalls = callsTab === "fundamental" ? fundCalls : techCalls;
   // Cap the calls preview at 5 rows with a "View more" control (loads 5 more);
   // shared across the cards/list toggle so expansion survives a view switch.
+  const companyName = useCompanyName();
   const callsPager = useViewMore(activeCalls);
 
   // Live hero metrics — computed from the actual calls (no hard-coded numbers).
@@ -357,8 +359,18 @@ export default function HomeScreen() {
                     <View style={[styles.callCardAccent, { backgroundColor: isPos ? C.primary : C.accent.red }]} />
                     <View style={[styles.callCardRow, isAr && styles.rowRTL]}>
                       <TickerLogo ticker={item.ticker} size={34} />
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={[styles.ticker, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>{item.ticker}</Text>
+                        {/* Company name under the symbol — same resolver the stock
+                            screen uses, so the two can never disagree. */}
+                        {companyName(item.ticker) ? (
+                          <Text
+                            numberOfLines={1}
+                            style={[styles.callCardCompany, { color: C.text.secondary, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}
+                          >
+                            {companyName(item.ticker)}
+                          </Text>
+                        ) : null}
                         <SignalBadge signal={item.signal} size="sm" />
                       </View>
                       <Text style={[styles.cardReturn, { color: item.hasReturn ? (isPos ? C.primary : C.accent.red) : C.text.muted }]}>
@@ -411,7 +423,17 @@ export default function HomeScreen() {
                   </View>
                   <View style={[styles.tickerCell, { flex: 1.5 }, isAr && styles.rowRTL]}>
                     <TickerLogo ticker={item.ticker} size={28} />
-                    <Text style={[styles.ticker, { color: C.text.primary, fontFamily: fontFamily("800") }]}>{item.ticker}</Text>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.ticker, { color: C.text.primary, fontFamily: fontFamily("800") }, isRTL && styles.textRight]}>{item.ticker}</Text>
+                      {companyName(item.ticker) ? (
+                        <Text
+                          numberOfLines={1}
+                          style={[styles.callCardCompany, { color: C.text.secondary, fontFamily: fontFamily("400") }, isRTL && styles.textRight]}
+                        >
+                          {companyName(item.ticker)}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
                   <Text style={[
                     styles.returnVal,
@@ -569,6 +591,7 @@ const styles = StyleSheet.create({
   },
   tickerIconText: { fontSize: 9, fontWeight: "800" },
   ticker: { fontWeight: "800", fontSize: Typography.sm, letterSpacing: 0.8 },
+  callCardCompany: { fontSize: 11, lineHeight: 15, marginTop: 1, marginBottom: 3 },
   returnVal: { fontWeight: "700", fontSize: Typography.sm, letterSpacing: 0.2 },
 
   // Market modal
