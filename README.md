@@ -23,8 +23,20 @@ share the same Supabase backend.
 | **Stores** | Apple App Store ID `6772120783` · Google Play internal testing |
 
 > **Brand history:** the project has been through `Rumble Pro` → `Qarar` →
-> `Smart Signals`. Folder, npm package (`rumble-premium-mobile`) and bundle id
-> (`com.rumble.pro`) retain earlier names for store/signing continuity.
+> `Smart Signals`. The npm package name was de-branded to `smartsignals-mobile`
+> (2026-07-22); only the **bundle id / package** `com.rumble.pro` retains the
+> earliest name.
+>
+> ⚠️ **`com.rumble.pro` is permanent and must not be "cleaned up."** Google Play
+> freezes the package name at first publish and App Store Connect freezes the
+> bundle ID at first build upload — so this string is welded to both live
+> listings, to FCM (`google-services.json`), and to the APNs push topic. Editing
+> it anywhere does not rename anything; it breaks push, breaks the Play download
+> link, and makes the next AAB unuploadable. Retiring the legacy name requires a
+> **new Play listing under a new package**, not a code edit — costed in
+> [`setup/BUNDLE_ID_DEBRAND_ANALYSIS.md`](../setup/BUNDLE_ID_DEBRAND_ANALYSIS.md).
+> The `rumblepro://` OAuth scheme is likewise load-bearing: if it is ever
+> changed it must be **added alongside**, never swapped.
 
 ---
 
