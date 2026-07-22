@@ -7,12 +7,17 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:886833548155:android:093a64e7b119425617cbde",
+        "mobilesdk_app_id": "1:886833548155:android:07a393c8b8c65e7e17cbde",
         "android_client_info": {
-          "package_name": "com.rumble.pro"
+          "package_name": "com.mubasher.smartsignals"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "886833548155-stqdkl9kkhpe1l4qk7mdrma1i36uphml.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA1rW9BQkhJae-fslahbnrwxqp3_BU0KgM"
@@ -20,7 +25,41 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "886833548155-stqdkl9kkhpe1l4qk7mdrma1i36uphml.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:886833548155:android:093a64e7b119425617cbde",
+        "android_client_info": {
+          "package_name": "com.rumble.pro"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "886833548155-stqdkl9kkhpe1l4qk7mdrma1i36uphml.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1rW9BQkhJae-fslahbnrwxqp3_BU0KgM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "886833548155-stqdkl9kkhpe1l4qk7mdrma1i36uphml.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
