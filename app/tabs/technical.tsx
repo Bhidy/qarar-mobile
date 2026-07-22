@@ -28,7 +28,6 @@ import { type TechnicalCall } from "@/constants/data";
 import { TickerLogo } from "@/components/shared/TickerLogo";
 import { type SaudiTechnical } from "@/constants/saudi-data";
 import { type UsaTechnical } from "@/constants/usa-data";
-import { looksLikeHtml } from "@/lib/rich-text";
 import { indexCatalogEntry } from "@/constants/index-catalog";
 
 export default function TechnicalScreen() {
@@ -572,16 +571,10 @@ function TechCallCard({
         </View>
       ) : null}
 
-      {call.notes ? (
-        <View style={[styles.notesBox, { borderTopColor: C.border.subtle }]}>
-          <Ionicons name="chatbubble-outline" size={10} color={C.text.muted} />
-          <Text style={[styles.notesText, { color: C.text.muted, fontFamily: fontFamily("400") }]} numberOfLines={2}>
-            {looksLikeHtml(call.notes)
-              ? call.notes.replace(/<[^>]+>/g, " ").replace(/&\w+;/g, " ").replace(/\s+/g, " ").trim()
-              : call.notes}
-          </Text>
-        </View>
-      ) : null}
+      {/* The analyst's free-text setup note is DELIBERATELY not rendered on the
+          technical card (web parity, owner decision 2026-07-22): it is long
+          boilerplate that buried the levels the card exists to show. The full
+          note still renders — as HTML — on the stock screen's technical tab. */}
 
       {updates.length > 0 ? (
         <CallUpdates updates={updates} isAr={isAr} isRTL={isRTL} C={C} fontFamily={fontFamily} />
@@ -684,6 +677,4 @@ const styles = StyleSheet.create({
   progressBar: { height: 4, borderRadius: 2, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
 
-  notesBox: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingTop: Spacing[2], borderTopWidth: 1 },
-  notesText: { flex: 1, fontSize: 10, lineHeight: 15 },
 });
