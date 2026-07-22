@@ -38,7 +38,10 @@ expo-env.d.ts
 
 # EAS local credentials — contains the Android keystore path + keystore/key
 # PASSWORDS in plaintext. MUST never be committed.
-credentials.json
+# Glob, not just credentials.json: the com.mubasher.smartsignals migration added
+# credentials.rumble-legacy.json (old com.rumble.pro upload key) and any future
+# per-app variant would otherwise land unignored in a PUBLIC repo.
+credentials*.json
 
 # Editor/agent local config (machine-specific paths)
 .claude/

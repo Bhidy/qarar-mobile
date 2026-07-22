@@ -47,8 +47,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0E1F"
       },
-      "package": "com.rumble.pro",
-      "versionCode": 25,
+      "package": "com.mubasher.smartsignals",
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO",
