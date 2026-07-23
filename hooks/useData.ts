@@ -240,6 +240,14 @@ function toArticle(row: any): Article {
   };
 }
 
+/** PostgREST returns numerics as strings. Keep absent values UNDEFINED rather than
+ *  letting Number(null) === 0 turn "we have no measurement" into "a 0% return". */
+function numOrUndef(v: any): number | undefined {
+  if (v === null || v === undefined || v === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 function toFundamental(row: any): FundamentalCall {
   return {
     ticker:        row.ticker,
@@ -269,6 +277,19 @@ function toFundamental(row: any): FundamentalCall {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    // Aligned-measurement provenance (web/setup/measurement_provenance_schema.sql).
+    // Carried so the app reads the SAME window the web does — without these the
+    // comparison falls back to a differently-anchored return and mobile prints a
+    // different alpha from the web for the same call.
+    benchIndex:     row.benchIndex ?? row.benchindex ?? undefined,
+    benchFrom:      row.benchFrom ?? row.benchfrom ?? undefined,
+    benchTo:        row.benchTo ?? row.benchto ?? undefined,
+    benchFromLevel: numOrUndef(row.benchFromLevel ?? row.benchfromlevel),
+    benchToLevel:   numOrUndef(row.benchToLevel ?? row.benchtolevel),
+    alignedEntry:   numOrUndef(row.alignedEntry ?? row.alignedentry),
+    alignedExit:    numOrUndef(row.alignedExit ?? row.alignedexit),
+    alignedReturn:  numOrUndef(row.alignedReturn ?? row.alignedreturn),
+    alignedIssues:  row.alignedIssues ?? row.alignedissues ?? undefined,
     disclaimer:     row.disclaimer ?? undefined,
     disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
     // Fair-value breach flag (server-owned) — "Under Review" chip on active surfaces.
@@ -310,6 +331,19 @@ function toTechnical(row: any): TechnicalCall {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    // Aligned-measurement provenance (web/setup/measurement_provenance_schema.sql).
+    // Carried so the app reads the SAME window the web does — without these the
+    // comparison falls back to a differently-anchored return and mobile prints a
+    // different alpha from the web for the same call.
+    benchIndex:     row.benchIndex ?? row.benchindex ?? undefined,
+    benchFrom:      row.benchFrom ?? row.benchfrom ?? undefined,
+    benchTo:        row.benchTo ?? row.benchto ?? undefined,
+    benchFromLevel: numOrUndef(row.benchFromLevel ?? row.benchfromlevel),
+    benchToLevel:   numOrUndef(row.benchToLevel ?? row.benchtolevel),
+    alignedEntry:   numOrUndef(row.alignedEntry ?? row.alignedentry),
+    alignedExit:    numOrUndef(row.alignedExit ?? row.alignedexit),
+    alignedReturn:  numOrUndef(row.alignedReturn ?? row.alignedreturn),
+    alignedIssues:  row.alignedIssues ?? row.alignedissues ?? undefined,
     // Extended price structure
     tp2:             row.tp2 ?? undefined,
     tp3:             row.tp3 ?? undefined,
@@ -425,6 +459,19 @@ function toSaudiStock(row: any): SaudiStock {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    // Aligned-measurement provenance (web/setup/measurement_provenance_schema.sql).
+    // Carried so the app reads the SAME window the web does — without these the
+    // comparison falls back to a differently-anchored return and mobile prints a
+    // different alpha from the web for the same call.
+    benchIndex:     row.benchIndex ?? row.benchindex ?? undefined,
+    benchFrom:      row.benchFrom ?? row.benchfrom ?? undefined,
+    benchTo:        row.benchTo ?? row.benchto ?? undefined,
+    benchFromLevel: numOrUndef(row.benchFromLevel ?? row.benchfromlevel),
+    benchToLevel:   numOrUndef(row.benchToLevel ?? row.benchtolevel),
+    alignedEntry:   numOrUndef(row.alignedEntry ?? row.alignedentry),
+    alignedExit:    numOrUndef(row.alignedExit ?? row.alignedexit),
+    alignedReturn:  numOrUndef(row.alignedReturn ?? row.alignedreturn),
+    alignedIssues:  row.alignedIssues ?? row.alignedissues ?? undefined,
     disclaimer:     row.disclaimer ?? undefined,
     disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as any;
@@ -454,6 +501,19 @@ function toSaudiTechnical(row: any): SaudiTechnical {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    // Aligned-measurement provenance (web/setup/measurement_provenance_schema.sql).
+    // Carried so the app reads the SAME window the web does — without these the
+    // comparison falls back to a differently-anchored return and mobile prints a
+    // different alpha from the web for the same call.
+    benchIndex:     row.benchIndex ?? row.benchindex ?? undefined,
+    benchFrom:      row.benchFrom ?? row.benchfrom ?? undefined,
+    benchTo:        row.benchTo ?? row.benchto ?? undefined,
+    benchFromLevel: numOrUndef(row.benchFromLevel ?? row.benchfromlevel),
+    benchToLevel:   numOrUndef(row.benchToLevel ?? row.benchtolevel),
+    alignedEntry:   numOrUndef(row.alignedEntry ?? row.alignedentry),
+    alignedExit:    numOrUndef(row.alignedExit ?? row.alignedexit),
+    alignedReturn:  numOrUndef(row.alignedReturn ?? row.alignedreturn),
+    alignedIssues:  row.alignedIssues ?? row.alignedissues ?? undefined,
     disclaimer:     row.disclaimer ?? undefined,
     disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as any;
@@ -485,6 +545,19 @@ function toUsaStock(row: any): UsaStock {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    // Aligned-measurement provenance (web/setup/measurement_provenance_schema.sql).
+    // Carried so the app reads the SAME window the web does — without these the
+    // comparison falls back to a differently-anchored return and mobile prints a
+    // different alpha from the web for the same call.
+    benchIndex:     row.benchIndex ?? row.benchindex ?? undefined,
+    benchFrom:      row.benchFrom ?? row.benchfrom ?? undefined,
+    benchTo:        row.benchTo ?? row.benchto ?? undefined,
+    benchFromLevel: numOrUndef(row.benchFromLevel ?? row.benchfromlevel),
+    benchToLevel:   numOrUndef(row.benchToLevel ?? row.benchtolevel),
+    alignedEntry:   numOrUndef(row.alignedEntry ?? row.alignedentry),
+    alignedExit:    numOrUndef(row.alignedExit ?? row.alignedexit),
+    alignedReturn:  numOrUndef(row.alignedReturn ?? row.alignedreturn),
+    alignedIssues:  row.alignedIssues ?? row.alignedissues ?? undefined,
     disclaimer:     row.disclaimer ?? undefined,
     disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as any;
@@ -514,6 +587,19 @@ function toUsaTechnical(row: any): UsaTechnical {
     totalReturn:    row.totalReturn ?? row.totalreturn ?? undefined,
     dividendReturn: row.dividendReturn ?? row.dividendreturn ?? undefined,
     dataQuality:    row.dataQuality ?? row.dataquality ?? undefined,
+    // Aligned-measurement provenance (web/setup/measurement_provenance_schema.sql).
+    // Carried so the app reads the SAME window the web does — without these the
+    // comparison falls back to a differently-anchored return and mobile prints a
+    // different alpha from the web for the same call.
+    benchIndex:     row.benchIndex ?? row.benchindex ?? undefined,
+    benchFrom:      row.benchFrom ?? row.benchfrom ?? undefined,
+    benchTo:        row.benchTo ?? row.benchto ?? undefined,
+    benchFromLevel: numOrUndef(row.benchFromLevel ?? row.benchfromlevel),
+    benchToLevel:   numOrUndef(row.benchToLevel ?? row.benchtolevel),
+    alignedEntry:   numOrUndef(row.alignedEntry ?? row.alignedentry),
+    alignedExit:    numOrUndef(row.alignedExit ?? row.alignedexit),
+    alignedReturn:  numOrUndef(row.alignedReturn ?? row.alignedreturn),
+    alignedIssues:  row.alignedIssues ?? row.alignedissues ?? undefined,
     disclaimer:     row.disclaimer ?? undefined,
     disclaimerAr:   row.disclaimerAr ?? row.disclaimerar ?? undefined,
   } as any;

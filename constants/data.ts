@@ -216,6 +216,19 @@ export interface FundamentalCall {
   // Fair-value breach flag (server-owned, sticky until analyst update) — active
   // surfaces render "Under Review" instead of the Buy/Sell chip (lib/under-review).
   underReview?: boolean;
+  // ── Aligned measurement (SERVER-OWNED; written only by the web reconcile cron).
+  // The stock leg and the benchmark leg of this call's alpha were priced on the
+  // SAME two sessions (benchFrom → benchTo). Mirrors web/lib/types.ts; carried by
+  // hooks/useData so mobile and web can never print different numbers for one call.
+  benchIndex?: string;
+  benchFrom?: string;
+  benchTo?: string;
+  benchFromLevel?: number;
+  benchToLevel?: number;
+  alignedEntry?: number;
+  alignedExit?: number;
+  alignedReturn?: number;
+  alignedIssues?: string;
 }
 
 export const FUNDAMENTAL_CALLS: FundamentalCall[] = [

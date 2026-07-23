@@ -98,8 +98,13 @@ export function PerformanceComparison({
               ))}
               <Text style={[styles.footnote, { color: C.text.muted, fontFamily: ff("400") }, isRTL && styles.textRight]}>
                 {t(
-                  "Each signal is measured against the index over its own holding period. Averages are equal-weighted per call. Open calls use their live, unrealized return.",
-                  "كل توصية تُقاس مقابل المؤشر خلال فترة احتفاظها. المتوسطات مرجّحة بالتساوي لكل توصية. التوصيات النشطة تستخدم عائدها اللحظي غير المحقق.",
+                  // One methodology, stated identically on web, admin and mobile.
+                  // The compounding sentence matters: it is the difference between
+                  // a benchmark of 73% and one of 33% on a call that spans an
+                  // update, and a reader who works it out period by period is
+                  // entitled to know which of the two they are looking at.
+                  "Each signal is measured against the index over its own holding period, with both the stock and the index priced on the same two trading sessions. Where a call spans an update, the periods compound — they are not averaged. Averages are equal-weighted per call.",
+                  "كل توصية تُقاس مقابل المؤشر خلال فترة احتفاظها، مع تسعير السهم والمؤشر على نفس جلستي التداول. وعندما تمتد التوصية عبر تحديث، تتراكم الفترات ولا يُؤخذ متوسطها. المتوسطات مرجّحة بالتساوي لكل توصية.",
                 )}
               </Text>
             </View>

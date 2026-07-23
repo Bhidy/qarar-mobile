@@ -34,6 +34,22 @@ export interface PerfCall {
   tadawul?: number;
   sp500?: number;
   dataQuality?: "verified" | "review" | "manual" | string;  // fundamental provenance gate
+  // ── Aligned measurement provenance — MIRRORS web/lib/performance.ts ─────────
+  // An alpha is a difference of two returns, so both must cover the same window.
+  // Until 2026-07-23 they did not: the stock leg was anchored to initiation+1
+  // trading day and the index leg to initiation, so 30 of 33 published calls
+  // compared two different periods. The reconcile cron now resolves ONE window
+  // per call and stores it here; mobile reads it so the app can never print a
+  // different number from the web for the same call.
+  benchIndex?: string;        // "EGX30" | "TASI" | "SP500"
+  benchFrom?: string;         // ISO session BOTH legs start on
+  benchTo?: string;           // ISO session BOTH legs end on
+  benchFromLevel?: number;    // index close at benchFrom
+  benchToLevel?: number;      // index close at benchTo
+  alignedEntry?: number;      // stock close at benchFrom
+  alignedExit?: number;       // stock close at benchTo
+  alignedReturn?: number;     // stock % over EXACTLY that window
+  alignedIssues?: string;     // coverage notes; empty = fully reconcilable
 }
 
 export interface OverallPerformance {
@@ -290,6 +306,27 @@ export function getStockReturn(call: PerfCall): number | null {
   return null;
 }
 
+/**
+ * The RECORD-surface stock return — the only number that may be subtracted from a
+ * benchmark. MIRRORS web/lib/performance.ts::getRecordReturn exactly.
+ *
+ *   • CLOSED → the LOCKED realized return. A settled outcome is an audited fact
+ *     and is never silently recomputed from bars.
+ *   • OPEN → `alignedReturn`: the mark measured over EXACTLY the sessions the
+ *     benchmark used. An unrealized mark is a measurement, not a fact, so it must
+ *     share its comparator's window or the alpha beside it is fiction.
+ *
+ * Falls back to getStockReturn when the reconcile has not produced a window yet,
+ * so no surface can go blank because of this.
+ */
+export function getRecordReturn(call: PerfCall): number | null {
+  if (isClosed(call)) return getRealizedReturn(call);
+  if (typeof call.alignedReturn === "number" && Number.isFinite(call.alignedReturn)) {
+    return call.alignedReturn + getDividendReturn(call);
+  }
+  return getStockReturn(call);
+}
+
 export interface CallComparisonRow {
   id?: string | number;
   ticker: string;
@@ -304,6 +341,11 @@ export interface CallComparisonRow {
   stockReturn: number;
   benchmarkReturn: number;
   alpha: number;
+  /** The SHARED window both numbers were measured on — shown under each row so a
+   *  return is never printed without the period it covers. Mirrors web. */
+  windowFrom?: string;
+  windowTo?: string;
+  benchIndex?: string;
 }
 
 export interface CallComparison {
@@ -326,7 +368,10 @@ export function computeCallComparison(
 
   const rows: CallComparisonRow[] = [];
   for (const c of eligible) {
-    const stockReturn = getStockReturn(c);
+    // getRecordReturn — NOT getStockReturn. This is the one place a stock return
+    // is subtracted from an index return, so it must use the leg measured over
+    // the benchmark's own window. Same rule as web/lib/performance.ts.
+    const stockReturn = getRecordReturn(c);
     const benchmarkReturn = getBenchmarkReturn(c);
     if (stockReturn === null || !Number.isFinite(stockReturn) ||
         benchmarkReturn === null || !Number.isFinite(benchmarkReturn)) {
@@ -346,7 +391,12 @@ export function computeCallComparison(
       closedDate: c.closedDate,
       stockReturn: +stockReturn.toFixed(2),
       benchmarkReturn: +benchmarkReturn.toFixed(2),
-      alpha: +(stockReturn - benchmarkReturn).toFixed(2),
+      // From the ROUNDED legs so the three numbers on screen always add up — a row
+      // where alpha ≠ stock − benchmark reads as a bug to anyone checking it.
+      alpha: +(+stockReturn.toFixed(2) - +benchmarkReturn.toFixed(2)).toFixed(2),
+      windowFrom: c.benchFrom,
+      windowTo: c.benchTo,
+      benchIndex: c.benchIndex,
     });
   }
 
